@@ -6,11 +6,26 @@ import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "sonner"
+import { TelemetryBootstrap } from "@/components/telemetry-bootstrap"
+import { PwaBootstrap } from "@/components/pwa-bootstrap"
+import { AuthSessionProvider } from "@/components/auth-session-provider"
 
 export const metadata: Metadata = {
   title: "JAWJI Ground Control Station",
   description: "AI-Powered GPS-Free Autonomous Drone Control System",
-  generator: "v0.app",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/jawji-logo.png",
+    shortcut: "/jawji-logo.png",
+    apple: "/jawji-logo.png",
+  },
+}
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#0B0F1A",
 }
 
 export default function RootLayout({
@@ -21,12 +36,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className="dark">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <ThemeProvider defaultTheme="dark" storageKey="jawji-theme">
-          <Suspense fallback={null}>
-            {children}
-            <Analytics />
-          </Suspense>
-        </ThemeProvider>
+        <AuthSessionProvider>
+          <ThemeProvider defaultTheme="dark" storageKey="jawji-theme">
+            <Suspense fallback={null}>
+              {children}
+              <Analytics />
+              <Toaster richColors position="top-right" />
+            </Suspense>
+            <TelemetryBootstrap />
+            <PwaBootstrap />
+          </ThemeProvider>
+        </AuthSessionProvider>
       </body>
     </html>
   )

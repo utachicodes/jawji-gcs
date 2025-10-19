@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Save, RefreshCw, Download, Upload, Plus, Trash2, Edit, Battery, Signal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,6 +25,20 @@ import {
 } from "@/components/ui/dialog"
 
 export function Settings() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const initialTab = (searchParams.get("tab") || "fleet").toLowerCase()
+  const [tab, setTab] = useState<string>(initialTab)
+  useEffect(() => {
+    const next = (searchParams.get("tab") || "fleet").toLowerCase()
+    if (next !== tab) setTab(next)
+  }, [searchParams])
+  const onTabChange = (next: string) => {
+    setTab(next)
+    const url = new URL(window.location.href)
+    url.searchParams.set("tab", next)
+    router.replace(url.pathname + "?" + url.searchParams.toString())
+  }
   const [hasChanges, setHasChanges] = useState(false)
   const { drones, addDrone, removeDrone, updateDrone } = useDroneStore()
   const [isAddingDrone, setIsAddingDrone] = useState(false)
@@ -50,20 +66,19 @@ export function Settings() {
   })
 
   const handleAddDrone = () => {
-    if (newDrone.name && newDrone.serialNumber) {
-      addDrone({
-        id: Date.now().toString(),
-        name: newDrone.name,
-        model: newDrone.model,
-        serialNumber: newDrone.serialNumber,
-        status: "offline",
-        battery: 0,
-        signal: 0,
-        location: { lat: 0, lng: 0, alt: 0 },
-      })
-      setNewDrone({ name: "", model: "jawji-x1", serialNumber: "" })
-      setIsAddingDrone(false)
-    }
+    const valid = newDrone.name.trim().length > 0 && newDrone.model.trim().length > 0
+    if (!valid) return
+    addDrone({
+      name: newDrone.name.trim(),
+      model: newDrone.model.trim(),
+      status: "offline",
+      mode: "Standby",
+      battery: 0,
+      signal: 0,
+      location: { lat: 0, lng: 0, altitude: 0 },
+    })
+    setNewDrone({ name: "", model: "jawji-x1", serialNumber: "" })
+    setIsAddingDrone(false)
   }
 
   return (
@@ -86,7 +101,7 @@ export function Settings() {
         </div>
       </div>
 
-      <Tabs defaultValue="fleet" className="w-full">
+      <Tabs value={tab} onValueChange={onTabChange} className="w-full">
         <TabsList>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="preferences">Preferences</TabsTrigger>
@@ -399,11 +414,13 @@ export function Settings() {
                             <h3 className="font-semibold">{drone.name}</h3>
                             <Badge
                               variant={
-                                drone.status === "active"
+                                drone.status === "flying"
                                   ? "default"
-                                  : drone.status === "idle"
+                                  : drone.status === "online"
                                     ? "secondary"
-                                    : "outline"
+                                    : drone.status === "error"
+                                      ? "destructive"
+                                      : "outline"
                               }
                             >
                               {drone.status}
@@ -416,7 +433,7 @@ export function Settings() {
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground">
                               <span>Serial:</span>
-                              <span className="font-mono text-xs text-foreground">{drone.serialNumber}</span>
+                              <span className="font-mono text-xs text-foreground">—</span>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground">
                               <Battery className="h-3 w-3" />

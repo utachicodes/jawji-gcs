@@ -6,16 +6,17 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
-import { Eye, EyeOff, Loader2 } from "lucide-react"
+import { Eye, EyeOff, Loader2, Github, Mail } from "lucide-react"
+import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 
 export default function SignupPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
@@ -52,43 +53,68 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-4 text-center">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[radial-gradient(120%_60%_at_50%_0%,_hsl(var(--primary)/0.12),_transparent_60%)] bg-background">
+      <div className="w-full max-w-2xl">
+        <div className="text-center space-y-3 mb-8">
           <div className="flex justify-center">
-            <Image src="/jawji-logo.png" alt="JAWJI" width={160} height={53} className="h-12 w-auto" />
+            <Image src="/jawji-logo.png" alt="JAWJI" width={220} height={73} className="h-16 w-auto" />
           </div>
-          <div>
-            <CardTitle className="text-2xl">Create your account</CardTitle>
-            <CardDescription>Get started with JAWJI Ground Control Station</CardDescription>
+          <h1 className="text-4xl font-extrabold tracking-tight">Create your account</h1>
+          <p className="text-base text-muted-foreground">Get started with JAWJI Ground Control Station</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 text-base bg-transparent"
+            onClick={() => signIn("google", { callbackUrl: "/" })}
+          >
+            <Mail className="h-5 w-5 mr-2" /> Continue with Google
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 text-base bg-transparent"
+            onClick={() => signIn("github", { callbackUrl: "/" })}
+          >
+            <Github className="h-5 w-5 mr-2" /> Continue with GitHub
+          </Button>
+        </div>
+        <div className="flex items-center gap-4 mb-8">
+          <div className="h-px bg-border flex-1" />
+          <span className="text-sm text-muted-foreground">Or sign up with</span>
+          <div className="h-px bg-border flex-1" />
+        </div>
+
+        <form onSubmit={handleSignup} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="name" className="text-sm">Full Name</Label>
+            <Input
+              id="name"
+              type="text"
+              placeholder="John Doe"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              className="h-12 text-base"
+            />
           </div>
-        </CardHeader>
-        <form onSubmit={handleSignup}>
-          <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="pilot@jawji.com"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
+              className="h-12 text-base"
+            />
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="John Doe"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="pilot@jawji.com"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-sm">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -97,6 +123,7 @@ export default function SignupPage() {
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
+                  className="h-12 text-base pr-10"
                 />
                 <Button
                   type="button"
@@ -104,63 +131,71 @@ export default function SignupPage() {
                   size="icon"
                   className="absolute right-0 top-0 h-full px-3"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </Button>
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="Confirm your password"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                required
-              />
+              <Label htmlFor="confirmPassword" className="text-sm">Confirm Password</Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirm ? "text" : "password"}
+                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  required
+                  className="h-12 text-base pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowConfirm(!showConfirm)}
+                  aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
+                >
+                  {showConfirm ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </Button>
+              </div>
             </div>
-            <div className="flex items-start space-x-2">
-              <Checkbox
-                id="terms"
-                checked={formData.agreeToTerms}
-                onCheckedChange={(checked) => setFormData({ ...formData, agreeToTerms: checked as boolean })}
-              />
-              <label
-                htmlFor="terms"
-                className="text-sm text-muted-foreground leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                I agree to the{" "}
-                <Link href="/terms" className="text-primary hover:underline">
-                  Terms of Service
-                </Link>{" "}
-                and{" "}
-                <Link href="/privacy" className="text-primary hover:underline">
-                  Privacy Policy
-                </Link>
-              </label>
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating account...
-                </>
-              ) : (
-                "Create account"
-              )}
-            </Button>
-            <p className="text-sm text-center text-muted-foreground">
-              Already have an account?{" "}
-              <Link href="/login" className="text-primary hover:underline font-medium">
-                Sign in
-              </Link>
-            </p>
-          </CardFooter>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="terms"
+              checked={formData.agreeToTerms}
+              onCheckedChange={(checked) => setFormData({ ...formData, agreeToTerms: checked as boolean })}
+            />
+            <label htmlFor="terms" className="text-sm text-muted-foreground leading-none">
+              I agree to the <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link> and
+              {" "}
+              <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+            </label>
+          </div>
+
+          <Button
+            type="submit"
+            className="w-full h-12 text-base bg-gradient-to-r from-primary to-primary/70 text-primary-foreground"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Creating account...
+              </>
+            ) : (
+              "Create account"
+            )}
+          </Button>
+
+          <p className="text-sm text-center text-muted-foreground">
+            Already have an account? <Link href="/login" className="text-primary hover:underline font-medium">Sign in</Link>
+          </p>
         </form>
-      </Card>
+      </div>
     </div>
   )
 }

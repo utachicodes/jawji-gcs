@@ -1,1 +1,314 @@
 "use client"
+
+import { useMemo, useState } from "react"
+import { useDroneStore, type Drone } from "@/lib/drone-store"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Separator } from "@/components/ui/separator"
+import { Plus, Pencil, Trash2, Upload, Download, CheckCircle2 } from "lucide-react"
+
+export default function FleetView() {
+  const { drones, selectedDrone, addDrone, updateDrone, removeDrone, selectDrone } = useDroneStore()
+
+  const [query, setQuery] = useState("")
+  const [status, setStatus] = useState<string>("all")
+  const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState<Drone | null>(null)
+  const [form, setForm] = useState<{
+    name: string
+    model: string
+    status: Drone["status"]
+    mode: string
+    battery: number
+    signal: number
+    lat: number
+    lng: number
+    altitude: number
+  }>(() => ({ name: "", model: "", status: "offline", mode: "Standby", battery: 100, signal: 0, lat: 0, lng: 0, altitude: 0 }))
+
+  const filtered = useMemo(() => {
+    return drones.filter((d) => {
+      const matchQ = query ? (d.name + " " + d.model).toLowerCase().includes(query.toLowerCase()) : true
+      const matchS = status === "all" ? true : d.status === (status as Drone["status"]) || (status === "online" && d.status === "flying")
+      return matchQ && matchS
+    })
+  }, [drones, query, status])
+
+  const beginCreate = () => {
+    setEditing(null)
+    setForm({ name: "", model: "", status: "offline", mode: "Standby", battery: 100, signal: 0, lat: 0, lng: 0, altitude: 0 })
+    setOpen(true)
+  }
+
+  const beginEdit = (d: Drone) => {
+    setEditing(d)
+    setForm({
+      name: d.name,
+      model: d.model,
+      status: d.status,
+      mode: d.mode,
+      battery: d.battery,
+      signal: d.signal,
+      lat: d.location?.lat ?? 0,
+      lng: d.location?.lng ?? 0,
+      altitude: d.location?.altitude ?? 0,
+    })
+    setOpen(true)
+  }
+
+  const validForm =
+    form.name.trim().length > 0 &&
+    form.model.trim().length > 0 &&
+    form.battery >= 0 &&
+    form.battery <= 100 &&
+    form.signal >= 0 &&
+    form.signal <= 100
+
+  const submit = () => {
+    if (!validForm) return
+    if (editing) {
+      updateDrone(editing.id, {
+        name: form.name.trim(),
+        model: form.model.trim(),
+        status: form.status,
+        mode: form.mode.trim() || "Standby",
+        battery: Math.max(0, Math.min(100, Math.round(form.battery))),
+        signal: Math.max(0, Math.min(100, Math.round(form.signal))),
+        location: { lat: Number(form.lat) || 0, lng: Number(form.lng) || 0, altitude: Number(form.altitude) || 0 },
+      })
+    } else {
+      addDrone({
+        name: form.name.trim(),
+        model: form.model.trim(),
+        status: form.status,
+        mode: form.mode.trim() || "Standby",
+        battery: Math.max(0, Math.min(100, Math.round(form.battery))),
+        signal: Math.max(0, Math.min(100, Math.round(form.signal))),
+        location: { lat: Number(form.lat) || 0, lng: Number(form.lng) || 0, altitude: Number(form.altitude) || 0 },
+      } as any)
+    }
+    setOpen(false)
+  }
+
+  const exportJson = () => {
+    const blob = new Blob([JSON.stringify(drones, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "fleet.json"
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const importJson = async (file: File) => {
+    const text = await file.text()
+    try {
+      const arr = JSON.parse(text) as Partial<Drone>[]
+      for (const x of arr) {
+        if (!x?.name || !x?.model) continue
+        addDrone({ name: String(x.name), model: String(x.model), status: x.status === "online" || x.status === "flying" ? "online" : "offline", mode: x.mode ? String(x.mode) : "Standby", battery: typeof x.battery === "number" ? x.battery : 100, signal: typeof x.signal === "number" ? x.signal : 0 })
+      }
+    } catch {}
+  }
+
+  return (
+    <div className="h-full p-6 overflow-auto space-y-6">
+        <div className="flex items-end justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold font-mono">FLEET MANAGEMENT</h1>
+            <p className="text-muted-foreground font-mono">Manage drones, status, and assignments</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <input id="fleet-import" type="file" accept="application/json" className="hidden" onChange={(e) => e.target.files && e.target.files[0] && importJson(e.target.files[0])} />
+            <Button variant="outline" className="bg-transparent" onClick={() => document.getElementById("fleet-import")?.click()}>
+              <Upload className="h-4 w-4 mr-2" /> Import
+            </Button>
+            <Button variant="outline" className="bg-transparent" onClick={exportJson}>
+              <Download className="h-4 w-4 mr-2" /> Export
+            </Button>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={beginCreate}>
+                  <Plus className="h-4 w-4 mr-2" /> Add Drone
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle className="font-mono">{editing ? "EDIT DRONE" : "ADD DRONE"}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="name" className="font-mono text-xs">NAME</Label>
+                      <Input id="name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. JAWJI-003" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="model" className="font-mono text-xs">MODEL</Label>
+                      <Input id="model" value={form.model} onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))} placeholder="e.g. Autonomous X1" />
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label className="font-mono text-xs">STATUS</Label>
+                      <Select value={form.status} onValueChange={(v) => setForm((f) => ({ ...f, status: v as Drone["status"] }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="online">Online</SelectItem>
+                          <SelectItem value="offline">Offline</SelectItem>
+                          <SelectItem value="flying">Flying</SelectItem>
+                          <SelectItem value="error">Error</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label className="font-mono text-xs">MODE</Label>
+                      <Input value={form.mode} onChange={(e) => setForm((f) => ({ ...f, mode: e.target.value }))} placeholder="e.g. GPS-Denied / Standby" />
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label className="font-mono text-xs">BATTERY (%)</Label>
+                      <Input type="number" min={0} max={100} value={form.battery} onChange={(e) => setForm((f) => ({ ...f, battery: Number(e.target.value) }))} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label className="font-mono text-xs">SIGNAL (%)</Label>
+                      <Input type="number" min={0} max={100} value={form.signal} onChange={(e) => setForm((f) => ({ ...f, signal: Number(e.target.value) }))} />
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div className="grid gap-2">
+                      <Label className="font-mono text-xs">LAT</Label>
+                      <Input type="number" value={form.lat} onChange={(e) => setForm((f) => ({ ...f, lat: Number(e.target.value) }))} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label className="font-mono text-xs">LNG</Label>
+                      <Input type="number" value={form.lng} onChange={(e) => setForm((f) => ({ ...f, lng: Number(e.target.value) }))} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label className="font-mono text-xs">ALTITUDE (m)</Label>
+                      <Input type="number" value={form.altitude} onChange={(e) => setForm((f) => ({ ...f, altitude: Number(e.target.value) }))} />
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" className="bg-transparent" onClick={() => setOpen(false)}>Cancel</Button>
+                  <Button onClick={submit} disabled={!validForm}>{editing ? "Save" : "Create"}</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Directory</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Input placeholder="Search by name or model" value={query} onChange={(e) => setQuery(e.target.value)} />
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger className="w-44">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="online">Online</SelectItem>
+                  <SelectItem value="offline">Offline</SelectItem>
+                  <SelectItem value="flying">Flying</SelectItem>
+                  <SelectItem value="error">Error</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filtered.map((d) => {
+                const active = selectedDrone === d.id
+                return (
+                  <Card key={d.id} className={active ? "ring-2 ring-primary" : ""}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-semibold font-mono">{d.name}</span>
+                          {active && <Badge className="bg-primary">ACTIVE</Badge>}
+                        </div>
+                        <div className="text-sm text-muted-foreground font-mono">{d.model}</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="font-mono">
+                          {d.status.toUpperCase()}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-3 text-sm font-mono">
+                        <div className="space-y-1">
+                          <div className="text-muted-foreground">BATTERY</div>
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-full rounded bg-muted overflow-hidden">
+                              <div className="h-full bg-green-500" style={{ width: `${Math.max(0, Math.min(100, d.battery))}%` }} />
+                            </div>
+                            <span>{Math.round(d.battery)}%</span>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-muted-foreground">SIGNAL</div>
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-full rounded bg-muted overflow-hidden">
+                              <div className="h-full bg-green-500" style={{ width: `${Math.max(0, Math.min(100, d.signal))}%` }} />
+                            </div>
+                            <span>{Math.round(d.signal)}%</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" onClick={() => selectDrone(d.id)} disabled={active}>
+                          <CheckCircle2 className="h-4 w-4 mr-2" /> Set Active
+                        </Button>
+                        <Button size="sm" variant="outline" className="bg-transparent" onClick={() => beginEdit(d)}>
+                          <Pencil className="h-4 w-4 mr-2" /> Edit
+                        </Button>
+                        <Button size="sm" variant="outline" className="bg-transparent text-destructive border-destructive/40 hover:bg-destructive/10" onClick={() => removeDrone(d.id)}>
+                          <Trash2 className="h-4 w-4 mr-2" /> Remove
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Assignments</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList>
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+              </TabsList>
+              <TabsContent value="overview" className="text-sm text-muted-foreground">
+                Assign drones to missions and operators. Future backend integration will live here.
+              </TabsContent>
+              <TabsContent value="maintenance" className="text-sm text-muted-foreground">
+                Track maintenance status, schedules, and recent issues.
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+    </div>
+  )
+}

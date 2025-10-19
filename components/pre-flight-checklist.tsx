@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
+import { useMissionStore } from "@/lib/mission-store"
 
 interface ChecklistItem {
   id: string
@@ -14,27 +15,40 @@ interface ChecklistItem {
   critical: boolean
 }
 
-export function PreFlightChecklist({ onComplete }: { onComplete?: () => void }) {
-  const [checklist, setChecklist] = useState<ChecklistItem[]>([
-    { id: "1", category: "POWER", item: "Battery voltage > 22.0V", status: "pass", critical: true },
-    { id: "2", category: "POWER", item: "Battery capacity > 80%", status: "pass", critical: true },
-    { id: "3", category: "POWER", item: "Battery temperature nominal", status: "pass", critical: true },
-    { id: "4", category: "SENSORS", item: "IMU calibration valid", status: "pass", critical: true },
-    { id: "5", category: "SENSORS", item: "Magnetometer calibration valid", status: "pass", critical: true },
-    { id: "6", category: "SENSORS", item: "Barometer operational", status: "pass", critical: true },
-    { id: "7", category: "SENSORS", item: "Visual odometry initialized", status: "pass", critical: true },
-    { id: "8", category: "NAVIGATION", item: "SLAM system ready", status: "pass", critical: true },
-    { id: "9", category: "NAVIGATION", item: "Obstacle detection active", status: "pass", critical: true },
-    { id: "10", category: "NAVIGATION", item: "Home position set", status: "pass", critical: false },
-    { id: "11", category: "COMM", item: "Telemetry link established", status: "pass", critical: true },
-    { id: "12", category: "COMM", item: "Command link latency < 100ms", status: "pass", critical: true },
-    { id: "13", category: "COMM", item: "Video stream active", status: "pass", critical: false },
-    { id: "14", category: "SAFETY", item: "Geofence configured", status: "pass", critical: true },
-    { id: "15", category: "SAFETY", item: "Return-to-launch altitude set", status: "pass", critical: true },
-    { id: "16", category: "SAFETY", item: "Emergency procedures loaded", status: "pass", critical: true },
-    { id: "17", category: "PAYLOAD", item: "Camera operational", status: "pass", critical: false },
-    { id: "18", category: "PAYLOAD", item: "Gimbal calibrated", status: "pass", critical: false },
-  ])
+export function PreFlightChecklist({ missionId, onComplete }: { missionId?: string; onComplete?: () => void }) {
+  const missions = useMissionStore((s) => s.missions)
+  const mission = missions.find((m) => m.id === missionId)
+  const fromMission: ChecklistItem[] | null = mission?.checklist
+    ? mission.checklist.map((txt, idx) => ({
+        id: String(idx + 1),
+        category: "MISSION",
+        item: txt,
+        status: "pending",
+        critical: true,
+      }))
+    : null
+  const [checklist, setChecklist] = useState<ChecklistItem[]>(
+    fromMission || [
+      { id: "1", category: "POWER", item: "Battery voltage > 22.0V", status: "pass", critical: true },
+      { id: "2", category: "POWER", item: "Battery capacity > 80%", status: "pass", critical: true },
+      { id: "3", category: "POWER", item: "Battery temperature nominal", status: "pass", critical: true },
+      { id: "4", category: "SENSORS", item: "IMU calibration valid", status: "pass", critical: true },
+      { id: "5", category: "SENSORS", item: "Magnetometer calibration valid", status: "pass", critical: true },
+      { id: "6", category: "SENSORS", item: "Barometer operational", status: "pass", critical: true },
+      { id: "7", category: "SENSORS", item: "Visual odometry initialized", status: "pass", critical: true },
+      { id: "8", category: "NAVIGATION", item: "SLAM system ready", status: "pass", critical: true },
+      { id: "9", category: "NAVIGATION", item: "Obstacle detection active", status: "pass", critical: true },
+      { id: "10", category: "NAVIGATION", item: "Home position set", status: "pass", critical: false },
+      { id: "11", category: "COMM", item: "Telemetry link established", status: "pass", critical: true },
+      { id: "12", category: "COMM", item: "Command link latency < 100ms", status: "pass", critical: true },
+      { id: "13", category: "COMM", item: "Video stream active", status: "pass", critical: false },
+      { id: "14", category: "SAFETY", item: "Geofence configured", status: "pass", critical: true },
+      { id: "15", category: "SAFETY", item: "Return-to-launch altitude set", status: "pass", critical: true },
+      { id: "16", category: "SAFETY", item: "Emergency procedures loaded", status: "pass", critical: true },
+      { id: "17", category: "PAYLOAD", item: "Camera operational", status: "pass", critical: false },
+      { id: "18", category: "PAYLOAD", item: "Gimbal calibrated", status: "pass", critical: false },
+    ],
+  )
 
   const categories = Array.from(new Set(checklist.map((item) => item.category)))
   const passedItems = checklist.filter((item) => item.status === "pass").length

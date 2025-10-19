@@ -1,18 +1,19 @@
 "use client"
+
 import dynamic from "next/dynamic"
 import { AuthWrapper } from "@/components/auth-wrapper"
 import { AppLayout } from "@/components/app-layout"
 
-const Analytics = dynamic(() => import("@/components/analytics").then((m) => m.Analytics), {
+const MissionWizard = dynamic(() => import("@/components/mission-wizard").then((m) => m.MissionWizard), {
   ssr: false,
   loading: () => null,
 })
 
-export default function AnalyticsPage() {
+export default function MissionNewPage() {
   return (
     <AuthWrapper>
       <AppLayout>
-        <Analytics />
+        <MissionWizard />
       </AppLayout>
     </AuthWrapper>
   )

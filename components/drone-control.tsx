@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { useEffect } from "react"
+import { useGamepad } from "@/hooks/use-gamepad"
 import {
   Play,
   Square,
@@ -28,6 +30,16 @@ export function DroneControl() {
   const [yaw, setYaw] = useState([0])
   const [leftJoystick, setLeftJoystick] = useState({ x: 0, y: 0 })
   const [rightJoystick, setRightJoystick] = useState({ x: 0, y: 0 })
+  const gp = useGamepad(true)
+
+  useEffect(() => {
+    setLeftJoystick({ x: gp.left.x, y: -gp.left.y })
+    setRightJoystick({ x: gp.right.x, y: -gp.right.y })
+    const t = Math.round(((1 - (gp.left.y + 1) / 2) * 100))
+    const yv = Math.round(gp.left.x * 100)
+    setThrottle([Math.max(0, Math.min(100, t))])
+    setYaw([Math.max(-100, Math.min(100, yv))])
+  }, [gp.left.x, gp.left.y, gp.right.x, gp.right.y])
 
   return (
     <div className="h-full p-6 space-y-6 overflow-auto">
@@ -69,21 +81,25 @@ export function DroneControl() {
             <CardTitle>Virtual Joysticks</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex justify-around items-center py-8">
-              <VirtualJoystick
-                label="Throttle / Yaw"
-                onMove={(x, y) => {
-                  setLeftJoystick({ x, y })
-                  console.log("[v0] Left joystick:", { x, y })
-                }}
-              />
-              <VirtualJoystick
-                label="Pitch / Roll"
-                onMove={(x, y) => {
-                  setRightJoystick({ x, y })
-                  console.log("[v0] Right joystick:", { x, y })
-                }}
-              />
+            <div className="flex justify-around items-center py-8 gap-10">
+              <div className="flex flex-col items-center gap-2">
+                <div className="text-sm text-muted-foreground">Throttle / Yaw</div>
+                <VirtualJoystick
+                  onMove={(x, y) => {
+                    setLeftJoystick({ x, y })
+                    console.log("[v0] Left joystick:", { x, y })
+                  }}
+                />
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <div className="text-sm text-muted-foreground">Pitch / Roll</div>
+                <VirtualJoystick
+                  onMove={(x, y) => {
+                    setRightJoystick({ x, y })
+                    console.log("[v0] Right joystick:", { x, y })
+                  }}
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
               <div className="space-y-1">

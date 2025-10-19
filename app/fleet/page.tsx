@@ -1,4 +1,4 @@
-import { FleetView } from "@/components/fleet-view"
+import FleetView from "@/components/fleet-view"
 import { AuthWrapper } from "@/components/auth-wrapper"
 import { AppLayout } from "@/components/app-layout"
 

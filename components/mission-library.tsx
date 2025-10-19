@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { useMissionStore } from "@/lib/mission-store"
 
 interface Mission {
   id: string
@@ -52,52 +53,12 @@ interface Mission {
 
 export function MissionLibrary() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [missions, setMissions] = useState<Mission[]>([
-    {
-      id: "1",
-      name: "Survey Mission 01",
-      description: "Aerial survey of construction site area",
-      waypoints: 12,
-      distance: 2.4,
-      duration: 8.5,
-      createdAt: "2025-01-10",
-      lastModified: "2025-01-12",
-      status: "ready",
-    },
-    {
-      id: "2",
-      name: "Perimeter Inspection",
-      description: "Security perimeter check with thermal imaging",
-      waypoints: 8,
-      distance: 1.8,
-      duration: 6.2,
-      createdAt: "2025-01-08",
-      lastModified: "2025-01-11",
-      status: "completed",
-    },
-    {
-      id: "3",
-      name: "Warehouse Inventory",
-      description: "Indoor warehouse inventory scan",
-      waypoints: 24,
-      distance: 0.8,
-      duration: 12.0,
-      createdAt: "2025-01-12",
-      lastModified: "2025-01-12",
-      status: "draft",
-    },
-    {
-      id: "4",
-      name: "Pipeline Monitoring",
-      description: "Oil pipeline inspection route",
-      waypoints: 45,
-      distance: 8.2,
-      duration: 28.5,
-      createdAt: "2025-01-05",
-      lastModified: "2025-01-10",
-      status: "ready",
-    },
-  ])
+  const [createOpen, setCreateOpen] = useState(false)
+  const [newMissionName, setNewMissionName] = useState("")
+  const [newMissionDesc, setNewMissionDesc] = useState("")
+  const missions = useMissionStore((s) => s.missions)
+  const addMission = useMissionStore((s) => s.addMission)
+  const removeMission = useMissionStore((s) => s.removeMission)
 
   const filteredMissions = missions.filter(
     (mission) =>
@@ -105,20 +66,25 @@ export function MissionLibrary() {
       mission.description.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
-  const deleteMission = (id: string) => {
-    setMissions(missions.filter((m) => m.id !== id))
-  }
+  const deleteMission = (id: string) => removeMission(id)
 
   const duplicateMission = (mission: Mission) => {
-    const newMission = {
-      ...mission,
-      id: Date.now().toString(),
+    addMission({
       name: `${mission.name} (Copy)`,
-      createdAt: new Date().toISOString().split("T")[0],
-      lastModified: new Date().toISOString().split("T")[0],
-      status: "draft" as const,
-    }
-    setMissions([...missions, newMission])
+      description: mission.description,
+      waypoints: mission.waypoints,
+      distance: mission.distance,
+      duration: mission.duration,
+      status: "draft",
+      droneId: mission.droneId,
+      payload: mission.payload,
+      altitude: mission.altitude,
+      cruiseSpeed: mission.cruiseSpeed,
+      geofence: mission.geofence,
+      startTime: mission.startTime,
+      riskAssessment: mission.riskAssessment,
+      checklist: mission.checklist,
+    })
   }
 
   const getStatusColor = (status: Mission["status"]) => {
@@ -130,6 +96,23 @@ export function MissionLibrary() {
       case "draft":
         return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
     }
+  }
+
+  const canCreate = newMissionName.trim().length > 0 && newMissionDesc.trim().length > 0
+
+  const createMission = () => {
+    if (!canCreate) return
+    addMission({
+      name: newMissionName.trim(),
+      description: newMissionDesc.trim(),
+      waypoints: 0,
+      distance: 0,
+      duration: 0,
+      status: "draft",
+    })
+    setNewMissionName("")
+    setNewMissionDesc("")
+    setCreateOpen(false)
   }
 
   return (
@@ -145,9 +128,9 @@ export function MissionLibrary() {
             <Upload className="h-4 w-4 mr-2" />
             Import
           </Button>
-          <Dialog>
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button onClick={() => setCreateOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 New Mission
               </Button>
@@ -160,16 +143,26 @@ export function MissionLibrary() {
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label>Mission Name</Label>
-                  <Input placeholder="Enter mission name" />
+                  <Input
+                    placeholder="Enter mission name"
+                    value={newMissionName}
+                    onChange={(e) => setNewMissionName(e.target.value)}
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Description</Label>
-                  <Textarea placeholder="Enter mission description" />
+                  <Textarea
+                    placeholder="Enter mission description"
+                    value={newMissionDesc}
+                    onChange={(e) => setNewMissionDesc(e.target.value)}
+                    required
+                  />
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline">Cancel</Button>
-                <Button>Create Mission</Button>
+                <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+                <Button onClick={createMission} disabled={!canCreate}>Create Mission</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

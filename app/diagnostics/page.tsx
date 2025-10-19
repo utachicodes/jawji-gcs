@@ -4,12 +4,14 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AppLayout } from "@/components/app-layout"
 
 export default function DiagnosticsPage() {
   return (
     <AuthWrapper>
-      <div className="h-full p-6 overflow-auto">
-        <div className="space-y-6">
+      <AppLayout>
+        <div className="h-full p-6 overflow-auto">
+          <div className="space-y-6">
           <div>
             <h1 className="text-3xl font-bold font-mono">SYSTEM DIAGNOSTICS</h1>
             <p className="text-muted-foreground mt-2 font-mono">Hardware status and configuration parameters</p>
@@ -336,6 +338,7 @@ export default function DiagnosticsPage() {
           </Tabs>
         </div>
       </div>
+      </AppLayout>
     </AuthWrapper>
   )
 }

@@ -1,0 +1,35 @@
+"use client"
+
+import { useEffect } from "react"
+
+export function PwaBootstrap() {
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    if (!("serviceWorker" in navigator)) return
+
+    const register = async () => {
+      try {
+        const reg = await navigator.serviceWorker.register("/sw.js")
+        if (reg.waiting) {
+          reg.waiting.postMessage({ type: "SKIP_WAITING" })
+        }
+        reg.addEventListener("updatefound", () => {
+          const newWorker = reg.installing
+          if (!newWorker) return
+          newWorker.addEventListener("statechange", () => {
+            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+              // New update available; could show a toast prompting reload.
+              console.info("PWA update installed; reload to activate.")
+            }
+          })
+        })
+      } catch (e) {
+        console.warn("SW registration failed", e)
+      }
+    }
+
+    register()
+  }, [])
+
+  return null
+}

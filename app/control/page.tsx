@@ -1,8 +1,12 @@
 "use client"
 
 import { Suspense } from "react"
+import dynamic from "next/dynamic"
 import { useSearchParams } from "next/navigation"
-import { DroneControl } from "@/components/drone-control"
+const DroneControl = dynamic(() => import("@/components/drone-control").then((m) => m.DroneControl), {
+  ssr: false,
+  loading: () => null,
+})
 import { AuthWrapper } from "@/components/auth-wrapper"
 import { AppLayout } from "@/components/app-layout"
 import { Alert, AlertDescription } from "@/components/ui/alert"

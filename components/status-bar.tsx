@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/components/ui/sidebar"
 import { useTheme } from "@/components/theme-provider"
 import { useDroneStore } from "@/lib/drone-store"
+import type { Drone } from "@/lib/drone-store"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,28 +16,41 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useSession, signOut } from "next-auth/react"
 
 export function StatusBar() {
   const router = useRouter()
   const { toggleSidebar } = useSidebar()
   const { theme, setTheme } = useTheme()
   const { drones, selectedDrone, selectDrone } = useDroneStore()
+  const { data: session } = useSession()
   const [user, setUser] = useState<{ name: string; email: string } | null>(null)
 
   useEffect(() => {
-    const userData = localStorage.getItem("jawji_user")
-    if (userData) {
-      setUser(JSON.parse(userData))
+    // Prefer NextAuth session if available; fallback to legacy local storage
+    if (session?.user) {
+      setUser({ name: session.user.name || "Operator", email: session.user.email || "operator@jawji.com" })
+      return
     }
-  }, [])
+    const userData = typeof window !== "undefined" ? localStorage.getItem("jawji_user") : null
+    if (userData) setUser(JSON.parse(userData))
+  }, [session])
 
   const handleLogout = () => {
-    localStorage.removeItem("jawji_auth_token")
-    localStorage.removeItem("jawji_user")
-    router.push("/login")
+    // Clear legacy local storage and sign out via NextAuth when present
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("jawji_auth_token")
+      localStorage.removeItem("jawji_user")
+    }
+    // Use NextAuth signOut to clear session; fallback navigate
+    try {
+      signOut({ callbackUrl: "/login" })
+    } catch {
+      router.push("/login")
+    }
   }
 
-  const currentDrone = drones.find((d) => d.id === selectedDrone)
+  const currentDrone = drones.find((d: Drone) => d.id === selectedDrone)
 
   return (
     <div className="h-14 border-b border-border bg-card flex items-center justify-between px-6">
@@ -61,7 +75,7 @@ export function StatusBar() {
           <DropdownMenuContent align="start">
             <DropdownMenuLabel>Select Drone</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {drones.map((drone) => (
+            {drones.map((drone: Drone) => (
               <DropdownMenuItem
                 key={drone.id}
                 onClick={() => selectDrone(drone.id)}
@@ -76,12 +90,21 @@ export function StatusBar() {
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.push("/settings?tab=drones")}>Manage Drones</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/settings?tab=fleet")}>Manage Drones</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className="text-sm text-muted-foreground">
-          Mode: <span className="text-foreground">{currentDrone?.mode || "N/A"}</span>
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div>
+            Mode: <span className="text-foreground">{currentDrone?.mode || "N/A"}</span>
+          </div>
+          <div className="hidden sm:flex items-center gap-2">
+            <span className="font-mono">Batt {Math.round(currentDrone?.battery ?? 0)}%</span>
+            <span className="font-mono">Sig {Math.round(currentDrone?.signal ?? 0)}%</span>
+            <span className="font-mono">
+              Alt {currentDrone?.location ? Math.round(currentDrone.location.altitude) : 0}m
+            </span>
+          </div>
         </div>
       </div>
 
