@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { useMissionStore } from "@/lib/mission-store"
+import { useDroneStore } from "@/lib/drone-store"
 
 interface ChecklistItem {
   id: string
@@ -18,6 +19,9 @@ interface ChecklistItem {
 export function PreFlightChecklist({ missionId, onComplete }: { missionId?: string; onComplete?: () => void }) {
   const missions = useMissionStore((s) => s.missions)
   const mission = missions.find((m) => m.id === missionId)
+  const { drones, selectedDrone } = useDroneStore()
+  const activeDrone = drones.find((d) => d.id === selectedDrone)
+  const batteryPct = activeDrone?.battery ?? 0
   const fromMission: ChecklistItem[] | null = mission?.checklist
     ? mission.checklist.map((txt, idx) => ({
         id: String(idx + 1),
@@ -27,28 +31,29 @@ export function PreFlightChecklist({ missionId, onComplete }: { missionId?: stri
         critical: true,
       }))
     : null
-  const [checklist, setChecklist] = useState<ChecklistItem[]>(
-    fromMission || [
-      { id: "1", category: "POWER", item: "Battery voltage > 22.0V", status: "pass", critical: true },
-      { id: "2", category: "POWER", item: "Battery capacity > 80%", status: "pass", critical: true },
-      { id: "3", category: "POWER", item: "Battery temperature nominal", status: "pass", critical: true },
-      { id: "4", category: "SENSORS", item: "IMU calibration valid", status: "pass", critical: true },
-      { id: "5", category: "SENSORS", item: "Magnetometer calibration valid", status: "pass", critical: true },
-      { id: "6", category: "SENSORS", item: "Barometer operational", status: "pass", critical: true },
-      { id: "7", category: "SENSORS", item: "Visual odometry initialized", status: "pass", critical: true },
-      { id: "8", category: "NAVIGATION", item: "SLAM system ready", status: "pass", critical: true },
-      { id: "9", category: "NAVIGATION", item: "Obstacle detection active", status: "pass", critical: true },
-      { id: "10", category: "NAVIGATION", item: "Home position set", status: "pass", critical: false },
-      { id: "11", category: "COMM", item: "Telemetry link established", status: "pass", critical: true },
-      { id: "12", category: "COMM", item: "Command link latency < 100ms", status: "pass", critical: true },
-      { id: "13", category: "COMM", item: "Video stream active", status: "pass", critical: false },
-      { id: "14", category: "SAFETY", item: "Geofence configured", status: "pass", critical: true },
-      { id: "15", category: "SAFETY", item: "Return-to-launch altitude set", status: "pass", critical: true },
-      { id: "16", category: "SAFETY", item: "Emergency procedures loaded", status: "pass", critical: true },
-      { id: "17", category: "PAYLOAD", item: "Camera operational", status: "pass", critical: false },
-      { id: "18", category: "PAYLOAD", item: "Gimbal calibrated", status: "pass", critical: false },
-    ],
-  )
+  const defaultChecklist: ChecklistItem[] = [
+    { id: "1", category: "POWER", item: "Battery voltage > 22.0V", status: batteryPct > 0 ? "pass" : "fail", critical: true },
+    { id: "2", category: "POWER", item: "Battery capacity > 80%", status: batteryPct >= 80 ? "pass" : "fail", critical: true },
+    { id: "3", category: "POWER", item: "Battery temperature nominal", status: "pass", critical: true },
+    { id: "4", category: "SENSORS", item: "IMU calibration valid", status: "pass", critical: true },
+    { id: "5", category: "SENSORS", item: "Magnetometer calibration valid", status: "pass", critical: true },
+    { id: "6", category: "SENSORS", item: "Barometer operational", status: "pass", critical: true },
+    { id: "7", category: "SENSORS", item: "Visual odometry initialized", status: "pass", critical: true },
+    { id: "8", category: "NAVIGATION", item: "SLAM system ready", status: "pass", critical: true },
+    { id: "9", category: "NAVIGATION", item: "Obstacle detection active", status: "pass", critical: true },
+    { id: "10", category: "NAVIGATION", item: "Waypoints configured", status: (mission?.waypointData?.length || 0) > 0 ? "pass" : "fail", critical: true },
+    { id: "11", category: "NAVIGATION", item: "Home position set", status: "pass", critical: false },
+    { id: "12", category: "COMM", item: "Telemetry link established", status: "pass", critical: true },
+    { id: "13", category: "COMM", item: "Command link latency < 100ms", status: "pass", critical: true },
+    { id: "14", category: "COMM", item: "Video stream active", status: "pass", critical: false },
+    { id: "15", category: "SAFETY", item: "Geofence configured", status: mission?.geofence ? "pass" : "fail", critical: true },
+    { id: "16", category: "SAFETY", item: "Return-to-launch altitude set", status: "pass", critical: true },
+    { id: "17", category: "SAFETY", item: "Emergency procedures loaded", status: "pass", critical: true },
+    { id: "18", category: "COMPLIANCE", item: "NOTAMs reviewed", status: "pending", critical: true },
+    { id: "19", category: "PAYLOAD", item: "Camera operational", status: "pass", critical: false },
+    { id: "20", category: "PAYLOAD", item: "Gimbal calibrated", status: "pass", critical: false },
+  ]
+  const [checklist, setChecklist] = useState<ChecklistItem[]>(fromMission || defaultChecklist)
 
   const categories = Array.from(new Set(checklist.map((item) => item.category)))
   const passedItems = checklist.filter((item) => item.status === "pass").length
@@ -59,15 +64,22 @@ export function PreFlightChecklist({ missionId, onComplete }: { missionId?: stri
 
   return (
     <div className="space-y-6">
-      <Card className="border-2 border-primary/20">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-mono">PRE-FLIGHT CHECKLIST</CardTitle>
-            <Badge variant={allCriticalPassed ? "default" : "destructive"} className="font-mono">
-              {allCriticalPassed ? "READY" : "NOT READY"}
-            </Badge>
-          </div>
-        </CardHeader>
+      <Card className="border-2 border-primary/20 overflow-hidden">
+        <div className="bg-gradient-to-r from-primary/10 to-primary/0">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl font-mono tracking-wide">PRE-FLIGHT CHECKLIST</CardTitle>
+              <Badge variant={allCriticalPassed ? "default" : "destructive"} className="font-mono">
+                {allCriticalPassed ? "READY" : "NOT READY"}
+              </Badge>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              {mission && <Badge variant="outline" className="font-mono">Mission: {mission.name}</Badge>}
+              {activeDrone && <Badge variant="outline" className="font-mono">Drone: {activeDrone.name}</Badge>}
+              <Badge variant="outline" className="font-mono">Waypoints: {mission?.waypointData?.length ?? 0}</Badge>
+            </div>
+          </CardHeader>
+        </div>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <div className="flex justify-between text-sm font-mono">
@@ -80,15 +92,15 @@ export function PreFlightChecklist({ missionId, onComplete }: { missionId?: stri
           </div>
 
           <div className="grid grid-cols-3 gap-4 text-center text-sm font-mono">
-            <div>
+            <div className="p-3 rounded-lg border bg-card/60">
               <div className="text-2xl font-bold text-green-500">{passedItems}</div>
               <div className="text-muted-foreground">PASSED</div>
             </div>
-            <div>
+            <div className="p-3 rounded-lg border bg-card/60">
               <div className="text-2xl font-bold text-red-500">{failedItems}</div>
               <div className="text-muted-foreground">FAILED</div>
             </div>
-            <div>
+            <div className="p-3 rounded-lg border bg-card/60">
               <div className="text-2xl font-bold text-yellow-500">{checklist.length - passedItems - failedItems}</div>
               <div className="text-muted-foreground">PENDING</div>
             </div>
@@ -127,12 +139,39 @@ export function PreFlightChecklist({ missionId, onComplete }: { missionId?: stri
                         </Badge>
                       )}
                     </div>
-                    <Badge
-                      variant={item.status === "pass" ? "default" : item.status === "fail" ? "destructive" : "outline"}
-                      className="font-mono text-xs"
-                    >
-                      {item.status.toUpperCase()}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      {item.category === "COMPLIANCE" && item.item.toLowerCase().includes("notams") && item.status !== "pass" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 bg-transparent"
+                          onClick={() =>
+                            setChecklist((prev) =>
+                              prev.map((it) =>
+                                it.id === item.id ? { ...it, status: "pass" } : it,
+                              ),
+                            )
+                          }
+                        >
+                          Review
+                        </Button>
+                      )}
+                      <Badge
+                        variant={item.status === "pass" ? "default" : item.status === "fail" ? "destructive" : "outline"}
+                        className="font-mono text-xs cursor-pointer"
+                        onClick={() =>
+                          setChecklist((prev) =>
+                            prev.map((it) =>
+                              it.id === item.id
+                                ? { ...it, status: it.status === "pending" ? "pass" : it.status === "pass" ? "fail" : "pending" }
+                                : it,
+                            ),
+                          )
+                        }
+                      >
+                        {item.status.toUpperCase()}
+                      </Badge>
+                    </div>
                   </div>
                 ))}
             </div>

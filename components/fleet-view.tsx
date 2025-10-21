@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useDroneStore, type Drone } from "@/lib/drone-store"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,6 +15,9 @@ import { Plus, Pencil, Trash2, Upload, Download, CheckCircle2 } from "lucide-rea
 
 export default function FleetView() {
   const { drones, selectedDrone, addDrone, updateDrone, removeDrone, selectDrone } = useDroneStore()
+  const mapEl = useRef<HTMLDivElement | null>(null)
+  const mapRef = useRef<any>(null)
+  const markersLayerRef = useRef<any>(null)
 
   const [query, setQuery] = useState("")
   const [status, setStatus] = useState<string>("all")
@@ -96,6 +99,58 @@ export default function FleetView() {
     setOpen(false)
   }
 
+  const activeDrones = useMemo(() => drones.filter((d) => d.status === "online" || d.status === "flying"), [drones])
+
+  useEffect(() => {
+    let destroyed = false
+    async function init() {
+      if (!mapEl.current) return
+      const L = (await import("leaflet")).default
+      await import("leaflet-draw")
+      if (destroyed) return
+      // Fix default marker icons in Next.js
+      const iconUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png"
+      const iconRetinaUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png"
+      const shadowUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png"
+      ;(L as any).Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl })
+      const map = L.map(mapEl.current, { zoomControl: true })
+      mapRef.current = map
+      const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors",
+      })
+      osm.addTo(map)
+      map.setView([0, 0], 2)
+      markersLayerRef.current = new (L as any).LayerGroup()
+      markersLayerRef.current.addTo(map)
+    }
+    init()
+    return () => {
+      destroyed = true
+      try { mapRef.current && mapRef.current.remove() } catch {}
+    }
+  }, [])
+
+  useEffect(() => {
+    async function updateMarkers() {
+      const L = (await import("leaflet")).default
+      if (!mapRef.current || !markersLayerRef.current) return
+      markersLayerRef.current.clearLayers()
+      const bounds = new (L as any).LatLngBounds([])
+      activeDrones.forEach((d) => {
+        const lat = d.location?.lat ?? 0
+        const lng = d.location?.lng ?? 0
+        const marker = (L as any).marker([lat, lng])
+          .bindPopup(`<b>${d.name}</b><br/>${d.model}<br/>${d.status.toUpperCase()}`)
+        markersLayerRef.current.addLayer(marker)
+        bounds.extend([lat, lng])
+      })
+      if (activeDrones.length > 0 && bounds.isValid && bounds.isValid()) {
+        mapRef.current.fitBounds(bounds, { padding: [30, 30], maxZoom: 12 })
+      }
+    }
+    updateMarkers()
+  }, [activeDrones])
+
   const exportJson = () => {
     const blob = new Blob([JSON.stringify(drones, null, 2)], { type: "application/json" })
     const url = URL.createObjectURL(blob)
@@ -138,7 +193,7 @@ export default function FleetView() {
                   <Plus className="h-4 w-4 mr-2" /> Add Drone
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-2xl">
+              <DialogContent className="sm:max-w-2xl z-[9999]">
                 <DialogHeader>
                   <DialogTitle className="font-mono">{editing ? "EDIT DRONE" : "ADD DRONE"}</DialogTitle>
                 </DialogHeader>
@@ -206,6 +261,18 @@ export default function FleetView() {
             </Dialog>
           </div>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Active Drones Map</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div ref={mapEl} className="h-72 w-full rounded-md overflow-hidden border" />
+            <div className="text-xs text-muted-foreground mt-2">
+              Showing {activeDrones.length} active drone{activeDrones.length === 1 ? "" : "s"}
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

@@ -17,6 +17,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useSession, signOut } from "next-auth/react"
+import Image from "next/image"
+import Link from "next/link"
 
 export function StatusBar() {
   const router = useRouter()
@@ -53,11 +55,15 @@ export function StatusBar() {
   const currentDrone = drones.find((d: Drone) => d.id === selectedDrone)
 
   return (
-    <div className="h-14 border-b border-border bg-card flex items-center justify-between px-6">
+    <div className="h-16 md:h-20 border-b border-border bg-card flex items-center justify-between px-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={toggleSidebar}>
           <SidebarIcon className="h-4 w-4" />
         </Button>
+
+        <Link href="/" className="flex items-center gap-2" aria-label="JAWJI Home">
+          <Image src="/jawji-logo.png" alt="JAWJI" width={180} height={40} className="h-8 md:h-10 w-auto" priority />
+        </Link>
 
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />

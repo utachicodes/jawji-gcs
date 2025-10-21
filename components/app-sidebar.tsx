@@ -35,24 +35,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/40 bg-[radial-gradient(50%_50%_at_50%_0%,_hsl(var(--primary)/0.08),_transparent_70%)]">
-      <SidebarHeader className="border-b border-border/40 bg-card/60 backdrop-blur">
-        <div className="flex items-center justify-center px-4 py-4">
-          <Image
-            src="/jawji-logo.png"
-            alt="JAWJI"
-            width={120}
-            height={40}
-            className="h-8 w-auto group-data-[collapsible=icon]:hidden"
-          />
-          <Image
-            src="/jawji-logo.png"
-            alt="J"
-            width={32}
-            height={32}
-            className="hidden group-data-[collapsible=icon]:block h-8 w-8 object-contain"
-          />
-        </div>
-      </SidebarHeader>
+      <SidebarHeader className="border-b border-border/40 bg-card/60 backdrop-blur" />
       <SidebarContent className="bg-card/40">
         <div className="px-3 pt-3 pb-1 text-[10px] tracking-[0.15em] text-muted-foreground font-mono group-data-[collapsible=icon]:hidden">
           NAVIGATION

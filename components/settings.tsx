@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import { useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Save, RefreshCw, Download, Upload, Plus, Trash2, Edit, Battery, Signal } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -24,7 +23,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 
-export function Settings() {
+export default function Settings() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const initialTab = (searchParams.get("tab") || "fleet").toLowerCase()
@@ -65,6 +64,55 @@ export function Settings() {
     autoSave: true,
   })
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const defaultProfile = { name: "John Operator", email: "operator@jawji.com", role: "Senior Pilot", callSign: "ALPHA-1", certifications: "Part 107, Advanced Operations" }
+  const defaultPreferences = { units: "metric", mapProvider: "osm", telemetryRate: "10", videoQuality: "high", notifications: true, soundAlerts: true, autoSave: true }
+
+  useEffect(() => {
+    try {
+      const p = localStorage.getItem("jawji_profile")
+      const pref = localStorage.getItem("jawji_preferences")
+      if (p) setProfile(JSON.parse(p))
+      if (pref) setPreferences(JSON.parse(pref))
+      setHasChanges(false)
+    } catch {}
+  }, [])
+
+  const handleSave = () => {
+    try {
+      localStorage.setItem("jawji_profile", JSON.stringify(profile))
+      localStorage.setItem("jawji_preferences", JSON.stringify(preferences))
+      setHasChanges(false)
+    } catch {}
+  }
+
+  const handleReset = () => {
+    setProfile(defaultProfile)
+    setPreferences(defaultPreferences)
+    setHasChanges(true)
+  }
+
+  const handleExport = () => {
+    const data = { profile, preferences }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "jawji-config.json"
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleImport = async (file: File) => {
+    try {
+      const text = await file.text()
+      const data = JSON.parse(text)
+      if (data.profile) setProfile(data.profile)
+      if (data.preferences) setPreferences(data.preferences)
+      setHasChanges(true)
+    } catch {}
+  }
+
   const handleAddDrone = () => {
     const valid = newDrone.name.trim().length > 0 && newDrone.model.trim().length > 0
     if (!valid) return
@@ -90,11 +138,12 @@ export function Settings() {
           <p className="text-muted-foreground">Configure your drone and ground control station</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={(e) => e.target.files && e.target.files[0] && handleImport(e.target.files[0])} />
+          <Button variant="outline" onClick={handleReset}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Reset
           </Button>
-          <Button disabled={!hasChanges}>
+          <Button onClick={handleSave} disabled={!hasChanges}>
             <Save className="h-4 w-4 mr-2" />
             Save Changes
           </Button>
@@ -105,7 +154,6 @@ export function Settings() {
         <TabsList>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="preferences">Preferences</TabsTrigger>
-          <TabsTrigger value="fleet">Fleet Management</TabsTrigger>
           <TabsTrigger value="drone">Drone</TabsTrigger>
           <TabsTrigger value="navigation">Navigation</TabsTrigger>
           <TabsTrigger value="camera">Camera</TabsTrigger>
@@ -333,136 +381,7 @@ export function Settings() {
           </Card>
         </TabsContent>
 
-        {/* Fleet Management tab for drone management */}
-        <TabsContent value="fleet" className="space-y-4 mt-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Drone Fleet</CardTitle>
-                  <CardDescription>Manage your connected drones</CardDescription>
-                </div>
-                <Dialog open={isAddingDrone} onOpenChange={setIsAddingDrone}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Drone
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Add New Drone</DialogTitle>
-                      <DialogDescription>Register a new drone to your fleet</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label>Drone Name</Label>
-                        <Input
-                          placeholder="e.g., Survey Drone 01"
-                          value={newDrone.name}
-                          onChange={(e) => setNewDrone({ ...newDrone, name: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Model</Label>
-                        <Select
-                          value={newDrone.model}
-                          onValueChange={(value) => setNewDrone({ ...newDrone, model: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="jawji-x1">JAWJI X1</SelectItem>
-                            <SelectItem value="jawji-x2">JAWJI X2 Pro</SelectItem>
-                            <SelectItem value="jawji-x3">JAWJI X3 Enterprise</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Serial Number</Label>
-                        <Input
-                          placeholder="e.g., JX1-2024-001"
-                          value={newDrone.serialNumber}
-                          onChange={(e) => setNewDrone({ ...newDrone, serialNumber: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsAddingDrone(false)}>
-                        Cancel
-                      </Button>
-                      <Button onClick={handleAddDrone}>Add Drone</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {drones.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <p>No drones registered yet</p>
-                    <p className="text-sm">Click "Add Drone" to register your first drone</p>
-                  </div>
-                ) : (
-                  drones.map((drone) => (
-                    <Card key={drone.id} className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold">{drone.name}</h3>
-                            <Badge
-                              variant={
-                                drone.status === "flying"
-                                  ? "default"
-                                  : drone.status === "online"
-                                    ? "secondary"
-                                    : drone.status === "error"
-                                      ? "destructive"
-                                      : "outline"
-                              }
-                            >
-                              {drone.status}
-                            </Badge>
-                          </div>
-                          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <span>Model:</span>
-                              <span className="font-medium text-foreground">{drone.model.toUpperCase()}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <span>Serial:</span>
-                              <span className="font-mono text-xs text-foreground">—</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <Battery className="h-3 w-3" />
-                              <span>Battery:</span>
-                              <span className="font-medium text-foreground">{drone.battery}%</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <Signal className="h-3 w-3" />
-                              <span>Signal:</span>
-                              <span className="font-medium text-foreground">{drone.signal}%</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button size="icon" variant="ghost">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" onClick={() => removeDrone(drone.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        
 
         <TabsContent value="drone" className="space-y-4 mt-6">
           <Card>
@@ -601,124 +520,7 @@ export function Settings() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="camera" className="space-y-4 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Camera Settings</CardTitle>
-              <CardDescription>Configure camera and gimbal parameters</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Video Resolution</Label>
-                  <Select defaultValue="1080p">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="720p">720p (1280x720)</SelectItem>
-                      <SelectItem value="1080p">1080p (1920x1080)</SelectItem>
-                      <SelectItem value="4k">4K (3840x2160)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Frame Rate</Label>
-                  <Select defaultValue="30">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="24">24 fps</SelectItem>
-                      <SelectItem value="30">30 fps</SelectItem>
-                      <SelectItem value="60">60 fps</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Photo Format</Label>
-                  <Select defaultValue="jpg">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="jpg">JPEG</SelectItem>
-                      <SelectItem value="raw">RAW</SelectItem>
-                      <SelectItem value="both">JPEG + RAW</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Gimbal Mode</Label>
-                  <Select defaultValue="follow">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="follow">Follow</SelectItem>
-                      <SelectItem value="fpv">FPV</SelectItem>
-                      <SelectItem value="lock">Lock</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="system" className="space-y-4 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>System Configuration</CardTitle>
-              <CardDescription>Ground control station settings</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Communication Protocol</Label>
-                <Select defaultValue="mavlink">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mavlink">MAVLink</SelectItem>
-                    <SelectItem value="custom">Custom Protocol</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Telemetry Rate (Hz)</Label>
-                  <Input type="number" defaultValue="10" onChange={() => setHasChanges(true)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Video Latency (ms)</Label>
-                  <Input type="number" defaultValue="150" disabled />
-                </div>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Auto-Save Flight Logs</Label>
-                  <p className="text-sm text-muted-foreground">Automatically save all flight data</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <Separator />
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1 bg-transparent">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export Config
-                </Button>
-                <Button variant="outline" className="flex-1 bg-transparent">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Import Config
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        
       </Tabs>
     </div>
   )

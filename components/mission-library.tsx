@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
+import Link from "next/link"
 import {
   Plus,
   Search,
@@ -26,39 +27,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { useMissionStore } from "@/lib/mission-store"
+import type { Mission as StoreMission } from "@/lib/mission-store"
+import { toast } from "sonner"
+import { z } from "zod"
 
-interface Mission {
-  id: string
-  name: string
-  description: string
-  waypoints: number
-  distance: number
-  duration: number
-  createdAt: string
-  lastModified: string
-  status: "draft" | "ready" | "completed"
-}
+type Mission = StoreMission
 
 export function MissionLibrary() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [createOpen, setCreateOpen] = useState(false)
-  const [newMissionName, setNewMissionName] = useState("")
-  const [newMissionDesc, setNewMissionDesc] = useState("")
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [viewMode, setViewMode] = useState<"cards" | "list">("cards")
   const missions = useMissionStore((s) => s.missions)
   const addMission = useMissionStore((s) => s.addMission)
   const removeMission = useMissionStore((s) => s.removeMission)
+  const importMissions = useMissionStore((s) => s.importMissions)
 
   const filteredMissions = missions.filter(
     (mission) =>
@@ -84,7 +67,9 @@ export function MissionLibrary() {
       startTime: mission.startTime,
       riskAssessment: mission.riskAssessment,
       checklist: mission.checklist,
+      waypointData: mission.waypointData,
     })
+    toast.success("Mission duplicated")
   }
 
   const getStatusColor = (status: Mission["status"]) => {
@@ -98,21 +83,127 @@ export function MissionLibrary() {
     }
   }
 
-  const canCreate = newMissionName.trim().length > 0 && newMissionDesc.trim().length > 0
+  const WaypointSchema = z.object({
+    id: z.string().optional(),
+    lat: z.number(),
+    lng: z.number(),
+    altitude: z.number(),
+    action: z.string(),
+    speed: z.number().optional(),
+  })
 
-  const createMission = () => {
-    if (!canCreate) return
-    addMission({
-      name: newMissionName.trim(),
-      description: newMissionDesc.trim(),
-      waypoints: 0,
-      distance: 0,
-      duration: 0,
-      status: "draft",
-    })
-    setNewMissionName("")
-    setNewMissionDesc("")
-    setCreateOpen(false)
+  const MissionSchema = z.object({
+    id: z.union([z.string(), z.number()]).optional(),
+    name: z.string(),
+    description: z.string().optional().default(""),
+    waypoints: z.number().nonnegative().optional().default(0),
+    distance: z.number().nonnegative().optional().default(0),
+    duration: z.number().nonnegative().optional().default(0),
+    createdAt: z.string().optional(),
+    lastModified: z.string().optional(),
+    status: z.enum(["draft", "ready", "completed"]).optional().default("draft"),
+    droneId: z.any().optional(),
+    payload: z.any().optional(),
+    altitude: z.any().optional(),
+    cruiseSpeed: z.any().optional(),
+    geofence: z.any().optional(),
+    startTime: z.any().optional(),
+    riskAssessment: z.any().optional(),
+    checklist: z.array(z.string()).optional().default([]),
+    waypointData: z.array(WaypointSchema).optional(),
+  })
+
+  const handleImportClick = () => fileInputRef.current?.click()
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const text = await file.text()
+      const data = JSON.parse(text)
+      if (Array.isArray(data)) {
+        const parsed = data.map((m) => MissionSchema.safeParse(m))
+        const valids = parsed.filter((p) => p.success).map((p) => (p as any).data)
+        const errors = parsed.length - valids.length
+        if (valids.length > 0) {
+          importMissions(
+            valids.map((m: any) => ({
+              id: String(m.id || Date.now() + Math.random()),
+              name: m.name,
+              description: m.description ?? "",
+              waypoints: m.waypoints ?? 0,
+              distance: m.distance ?? 0,
+              duration: m.duration ?? 0,
+              createdAt: m.createdAt || new Date().toISOString().split("T")[0],
+              lastModified: m.lastModified || new Date().toISOString().split("T")[0],
+              status: m.status ?? "draft",
+              droneId: m.droneId,
+              payload: m.payload,
+              altitude: m.altitude,
+              cruiseSpeed: m.cruiseSpeed,
+              geofence: m.geofence,
+              startTime: m.startTime,
+              riskAssessment: m.riskAssessment,
+              checklist: m.checklist ?? [],
+              waypointData: Array.isArray(m.waypointData)
+                ? m.waypointData.map((w: any, idx: number) => ({
+                    ...w,
+                    id: String(w.id ?? idx + 1),
+                  }))
+                : undefined,
+            }))
+          )
+        }
+        if (errors > 0) toast.error(`${errors} mission(s) failed validation`)
+        if (valids.length > 0) toast.success(`Imported ${valids.length} mission(s)`)        
+      } else if (data && typeof data === "object") {
+        const parsed = MissionSchema.safeParse(data)
+        if (!parsed.success) {
+          toast.error("Mission failed validation")
+        } else {
+          const m = parsed.data
+          addMission({
+            name: m.name,
+            description: m.description ?? "",
+            waypoints: m.waypoints ?? 0,
+            distance: m.distance ?? 0,
+            duration: m.duration ?? 0,
+            status: m.status ?? "draft",
+            droneId: m.droneId,
+            payload: m.payload,
+            altitude: m.altitude,
+            cruiseSpeed: m.cruiseSpeed,
+            geofence: m.geofence,
+            startTime: m.startTime,
+            riskAssessment: m.riskAssessment,
+            checklist: m.checklist ?? [],
+            waypointData: Array.isArray(m.waypointData)
+              ? m.waypointData.map((w: any, idx: number) => ({
+                  ...w,
+                  id: String(w.id ?? idx + 1),
+                }))
+              : undefined,
+          })
+          toast.success("Imported mission")
+        }
+      }
+    } catch {
+      toast.error("Failed to import missions. Please check your file format.")
+    }
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
+
+  const exportMission = (mission: Mission) => {
+    const blob = new Blob([JSON.stringify(mission, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `${mission.name.replace(/\s+/g, "_") || "mission"}.json`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+    toast.success("Mission exported")
   }
 
   return (
@@ -124,48 +215,21 @@ export function MissionLibrary() {
           <p className="text-muted-foreground">Manage and organize your flight missions</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <div className="hidden md:flex items-center gap-1 mr-2">
+            <Button size="sm" variant={viewMode === "cards" ? "default" : "outline"} className="h-8" onClick={() => setViewMode("cards")}>Cards</Button>
+            <Button size="sm" variant={viewMode === "list" ? "default" : "outline"} className="h-8" onClick={() => setViewMode("list")}>List</Button>
+          </div>
+          <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={handleFileChange} />
+          <Button variant="outline" onClick={handleImportClick}>
             <Upload className="h-4 w-4 mr-2" />
             Import
           </Button>
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setCreateOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                New Mission
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Mission</DialogTitle>
-                <DialogDescription>Set up a new flight mission with custom parameters</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Mission Name</Label>
-                  <Input
-                    placeholder="Enter mission name"
-                    value={newMissionName}
-                    onChange={(e) => setNewMissionName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Textarea
-                    placeholder="Enter mission description"
-                    value={newMissionDesc}
-                    onChange={(e) => setNewMissionDesc(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-                <Button onClick={createMission} disabled={!canCreate}>Create Mission</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button asChild>
+            <Link href="/missions/planning">
+              <Plus className="h-4 w-4 mr-2" />
+              New Mission
+            </Link>
+          </Button>
         </div>
       </div>
 
@@ -192,83 +256,150 @@ export function MissionLibrary() {
           </Badge>
         </div>
       </div>
-
-      {/* Mission Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredMissions.map((mission) => (
-          <Card key={mission.id} className="hover:border-primary/50 transition-colors">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="space-y-1 flex-1">
-                  <CardTitle className="text-lg">{mission.name}</CardTitle>
-                  <CardDescription className="line-clamp-2">{mission.description}</CardDescription>
+      {viewMode === "list" ? (
+        <div className="w-full">
+          <div className="hidden md:grid grid-cols-12 px-3 py-2 text-xs text-muted-foreground border-b border-border/50">
+            <div className="col-span-4">Name</div>
+            <div className="col-span-2">Status</div>
+            <div className="col-span-2">Waypoints</div>
+            <div className="col-span-1">Dur</div>
+            <div className="col-span-1">Dist</div>
+            <div className="col-span-2">Modified</div>
+          </div>
+          <div className="divide-y divide-border/50">
+            {filteredMissions.map((mission) => (
+              <div key={mission.id} className="grid grid-cols-12 items-center px-3 py-3 hover:bg-accent/40">
+                <div className="col-span-12 md:col-span-4 min-w-0">
+                  <div className="font-medium truncate">{mission.name}</div>
+                  <div className="text-xs text-muted-foreground truncate">{mission.description}</div>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="h-4 w-4" />
+                <div className="col-span-6 md:col-span-2 mt-2 md:mt-0">
+                  <Badge variant="outline" className={getStatusColor(mission.status)}>
+                    {mission.status}
+                  </Badge>
+                </div>
+                <div className="col-span-3 md:col-span-2 mt-2 md:mt-0 text-sm text-muted-foreground">{mission.waypoints}</div>
+                <div className="col-span-3 md:col-span-1 mt-2 md:mt-0 text-sm text-muted-foreground">{mission.duration}m</div>
+                <div className="col-span-3 md:col-span-1 mt-2 md:mt-0 text-sm text-muted-foreground">{mission.distance}km</div>
+                <div className="col-span-6 md:col-span-2 mt-2 md:mt-0 text-xs text-muted-foreground">{mission.lastModified}</div>
+                <div className="col-span-6 md:col-span-12 md:justify-self-end mt-2 md:mt-0">
+                  <div className="flex items-center gap-2">
+                    <Button asChild size="sm" variant="outline" className="bg-transparent">
+                      <Link href={`/missions/planning?missionId=${mission.id}`}>
+                        <Edit className="h-3 w-3 mr-1" /> Edit
+                      </Link>
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
-                      <Edit className="h-4 w-4 mr-2" />
+                    <Button asChild size="sm" variant="outline" className="bg-transparent">
+                      <Link href={`/preflight?missionId=${mission.id}`}>
+                        <Play className="h-3 w-3 mr-1" /> Pre-flight
+                      </Link>
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon" variant="ghost" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => duplicateMission(mission)}>
+                          <Copy className="h-4 w-4 mr-2" /> Duplicate
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => exportMission(mission)}>
+                          <Download className="h-4 w-4 mr-2" /> Export
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive" onClick={() => deleteMission(mission.id)}>
+                          <Trash2 className="h-4 w-4 mr-2" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredMissions.map((mission) => (
+            <Card key={mission.id} className="hover:border-primary/50 transition-colors">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1 flex-1">
+                    <CardTitle className="text-lg">{mission.name}</CardTitle>
+                    <CardDescription className="line-clamp-2">{mission.description}</CardDescription>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => duplicateMission(mission)}>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Duplicate
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => exportMission(mission)}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Export
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-destructive" onClick={() => deleteMission(mission.id)}>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <Badge variant="outline" className={getStatusColor(mission.status)}>
+                  {mission.status}
+                </Badge>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <MapPin className="h-4 w-4" />
+                    <span>{mission.waypoints} waypoints</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    <span>{mission.duration} min</span>
+                  </div>
+                </div>
+                <div className="text-sm space-y-1">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <span>Distance:</span>
+                    <span className="text-foreground font-medium">{mission.distance} km</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Calendar className="h-3 w-3" />
+                    <span className="text-xs">Modified {mission.lastModified}</span>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button className="flex-1" size="sm">
+                    <Play className="h-3 w-3 mr-1" />
+                    Load
+                  </Button>
+                  <Button asChild variant="outline" size="sm" className="flex-1 bg-transparent">
+                    <Link href={`/preflight?missionId=${mission.id}`}>
+                      <Play className="h-3 w-3 mr-1" />
+                      Pre-flight
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm" className="flex-1 bg-transparent">
+                    <Link href={`/missions/planning?missionId=${mission.id}`}>
+                      <Edit className="h-3 w-3 mr-1" />
                       Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => duplicateMission(mission)}>
-                      <Copy className="h-4 w-4 mr-2" />
-                      Duplicate
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Download className="h-4 w-4 mr-2" />
-                      Export
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive" onClick={() => deleteMission(mission.id)}>
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <Badge variant="outline" className={getStatusColor(mission.status)}>
-                {mission.status}
-              </Badge>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  <span>{mission.waypoints} waypoints</span>
+                    </Link>
+                  </Button>
                 </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Clock className="h-4 w-4" />
-                  <span>{mission.duration} min</span>
-                </div>
-              </div>
-              <div className="text-sm space-y-1">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <span>Distance:</span>
-                  <span className="text-foreground font-medium">{mission.distance} km</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Calendar className="h-3 w-3" />
-                  <span className="text-xs">Modified {mission.lastModified}</span>
-                </div>
-              </div>
-              <div className="flex gap-2 pt-2">
-                <Button className="flex-1" size="sm">
-                  <Play className="h-3 w-3 mr-1" />
-                  Load
-                </Button>
-                <Button variant="outline" size="sm" className="flex-1 bg-transparent">
-                  <Edit className="h-3 w-3 mr-1" />
-                  Edit
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {filteredMissions.length === 0 && (
         <div className="text-center py-12">

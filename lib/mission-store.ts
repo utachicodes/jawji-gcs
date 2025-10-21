@@ -3,6 +3,15 @@ import { persist } from "zustand/middleware"
 
 export type MissionStatus = "draft" | "ready" | "completed"
 
+export interface Waypoint {
+  id: string
+  lat: number
+  lng: number
+  altitude: number
+  action: string
+  speed?: number
+}
+
 export interface Mission {
   id: string
   name: string
@@ -22,6 +31,8 @@ export interface Mission {
   startTime?: string
   riskAssessment?: string
   checklist?: string[]
+  // Full mission path
+  waypointData?: Waypoint[]
 }
 
 interface MissionStore {

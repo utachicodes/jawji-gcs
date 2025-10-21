@@ -75,9 +75,10 @@ export function MissionWizard() {
     return res.success
   }
 
-  const canNextBasics = validateBasics()
-  const canNextVehicle = validateVehicle()
-  const canNextProfile = validateProfile()
+  // Pure validity checks (no state updates) to control disabled state
+  const basicValid = basicsSchema.safeParse({ name: name.trim(), description: description.trim() }).success
+  const vehicleValid = vehicleSchema.safeParse({ droneId: droneId || "" }).success
+  const profileValid = profileSchema.safeParse({ altitude: Number(altitude), speed: Number(speed) }).success
 
   const onSubmit = () => {
     const mission = addMission({
@@ -256,7 +257,7 @@ export function MissionWizard() {
                 if (step === 3 && !validateProfile()) return
                 setStep((s) => Math.min(5, s + 1))
               }}
-              disabled={(step === 1 && !canNextBasics) || (step === 2 && !canNextVehicle) || (step === 3 && !canNextProfile)}
+              disabled={(step === 1 && !basicValid) || (step === 2 && !vehicleValid) || (step === 3 && !profileValid)}
             >
               Next
             </Button>

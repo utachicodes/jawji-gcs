@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Settings } from "@/components/settings"
+import Settings from "@/components/settings"
 import { AuthWrapper } from "@/components/auth-wrapper"
 import { AppLayout } from "@/components/app-layout"
 
@@ -26,9 +26,11 @@ export default function SettingsPage() {
   return (
     <AuthWrapper>
       <AppLayout>
-        {/* Settings component renders Tabs internally. We pass selected tab via a data attribute for now (non-invasive). */}
-        <div data-selected-tab={tab}>
-          <Settings />
+        {/* Settings full-page layout with internal scrolling */}
+        <div className="h-full p-4 lg:p-6 overflow-hidden" data-selected-tab={tab}>
+          <div className="h-full overflow-auto">
+            <Settings />
+          </div>
         </div>
         {/* Minimal script to sync tabs when clicked, without refactoring Settings component now. */}
         <script

@@ -4,10 +4,10 @@ import { useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { MapView } from "@/components/map-view"
+import { MapView3D } from "@/components/map-view-3d"
 import { VirtualJoystick } from "@/components/virtual-joystick"
 import { useDroneStore } from "@/lib/drone-store"
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+ 
 
 export function UnifiedDashboard() {
   // <CHANGE> Fixed to use selectedDrone instead of activeDroneId
@@ -30,13 +30,6 @@ export function UnifiedDashboard() {
     flightMode: "AUTO",
   })
 
-  const [altitudeData, setAltitudeData] = useState(
-    Array.from({ length: 30 }, (_, i) => ({
-      time: i,
-      altitude: 40 + Math.random() * 10,
-    })),
-  )
-
   // Simulate real-time telemetry updates
   useEffect(() => {
     const interval = setInterval(() => {
@@ -51,15 +44,10 @@ export function UnifiedDashboard() {
         longitude: prev.longitude + (Math.random() - 0.5) * 0.0001,
         flightTime: prev.flightTime + 1,
       }))
-
-      setAltitudeData((prev) => {
-        const newData = [...prev.slice(1), { time: prev[prev.length - 1].time + 1, altitude: telemetry.altitude }]
-        return newData
-      })
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [telemetry.altitude])
+  }, [])
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -70,6 +58,8 @@ export function UnifiedDashboard() {
   const handleJoystickMove = (x: number, y: number) => {
     console.log("[v0] Joystick move:", { x, y })
   }
+
+  const [mapMode, setMapMode] = useState<"2D" | "3D">("2D")
 
   return (
     <div className="h-full w-full bg-background p-4 overflow-hidden">
@@ -178,25 +168,54 @@ export function UnifiedDashboard() {
 
         {/* Map View - Top Right */}
         <Card className="col-span-5 row-span-7 p-0 overflow-hidden border-border/40">
-          <MapView
-            waypoints={[
-              {
-                id: "drone",
-                lat: telemetry.latitude,
-                lng: telemetry.longitude,
-                altitude: telemetry.altitude,
-                action: "current",
-              },
-            ]}
-            selectedWaypoint="drone"
-            onWaypointClick={() => {}}
-            center={[telemetry.latitude, telemetry.longitude]}
-            zoom={16}
-          />
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border/40">
+            <div className="text-xs font-mono text-muted-foreground">MAP MODE</div>
+            <div className="flex gap-1">
+              <Button size="sm" variant={mapMode === "2D" ? "default" : "outline"} className="h-7" onClick={() => setMapMode("2D")}>
+                2D
+              </Button>
+              <Button size="sm" variant={mapMode === "3D" ? "default" : "outline"} className="h-7" onClick={() => setMapMode("3D")}>
+                3D
+              </Button>
+            </div>
+          </div>
+          <div className="w-full h-full">
+            {mapMode === "2D" ? (
+              <MapView
+                waypoints={[
+                  {
+                    id: "drone",
+                    lat: telemetry.latitude,
+                    lng: telemetry.longitude,
+                    altitude: telemetry.altitude,
+                    action: "current",
+                  },
+                ]}
+                selectedWaypoint="drone"
+                onWaypointClick={() => {}}
+                center={[telemetry.latitude, telemetry.longitude]}
+                zoom={16}
+              />
+            ) : (
+              <div className="p-2 h-full">
+                <MapView3D
+                  waypoints={[
+                    {
+                      id: "drone",
+                      lat: telemetry.latitude,
+                      lng: telemetry.longitude,
+                      altitude: telemetry.altitude,
+                      action: "current",
+                    },
+                  ]}
+                />
+              </div>
+            )}
+          </div>
         </Card>
 
         {/* Telemetry Data - Bottom Left */}
-        <Card className="col-span-5 row-span-5 p-4 border-border/40 overflow-auto">
+        <Card className="col-span-5 row-span-5 p-4 border-border/40">
           <div className="space-y-4">
             <h3 className="text-sm font-semibold font-mono text-primary">TELEMETRY DATA</h3>
             <div className="grid grid-cols-2 gap-3 font-mono text-xs">
@@ -228,39 +247,6 @@ export function UnifiedDashboard() {
                 <div className="text-muted-foreground">ROLL</div>
                 <div className="text-2xl font-bold">{telemetry.roll.toFixed(1)}°</div>
               </div>
-            </div>
-
-            <div className="pt-4 border-t border-border/40">
-              <div className="text-xs text-muted-foreground mb-2 font-mono">ALTITUDE HISTORY</div>
-              <ChartContainer
-                config={{
-                  altitude: {
-                    label: "Altitude",
-                    color: "hsl(var(--primary))",
-                  },
-                }}
-                className="h-[120px]"
-              >
-                <AreaChart data={altitudeData}>
-                  <defs>
-                    <linearGradient id="fillAlt" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-altitude)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="var(--color-altitude)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="time" className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
-                  <YAxis className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Area
-                    type="monotone"
-                    dataKey="altitude"
-                    stroke="var(--color-altitude)"
-                    fill="url(#fillAlt)"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ChartContainer>
             </div>
           </div>
         </Card>

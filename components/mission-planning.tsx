@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Plus, Play, Save, Trash2, MapPin, Target } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
-import { MapView } from "@/components/map-view"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useMissionStore } from "@/lib/mission-store"
 
 interface Waypoint {
   id: string
@@ -22,6 +23,15 @@ interface Waypoint {
 }
 
 export function MissionPlanning() {
+  const mapEl = useRef<HTMLDivElement | null>(null)
+  const mapRef = useRef<any>(null)
+  const markersLayerRef = useRef<any>(null)
+  const pathLayerRef = useRef<any>(null)
+  const router = useRouter()
+  const params = useSearchParams()
+  const missions = useMissionStore((s) => s.missions)
+  const addMission = useMissionStore((s) => s.addMission)
+  const updateMission = useMissionStore((s) => s.updateMission)
   const [waypoints, setWaypoints] = useState<Waypoint[]>([
     { id: "1", lat: 37.7749, lng: -122.4194, altitude: 50, action: "hover", speed: 5 },
     { id: "2", lat: 37.7755, lng: -122.4185, altitude: 75, action: "capture", speed: 3 },
@@ -30,6 +40,26 @@ export function MissionPlanning() {
   const [selectedWaypoint, setSelectedWaypoint] = useState<string | null>(null)
   const [mapCenter, setMapCenter] = useState<[number, number]>([37.7749, -122.4194])
   const [mapZoom, setMapZoom] = useState(15)
+  const [missionName, setMissionName] = useState("Survey Mission 01")
+  const [editingId, setEditingId] = useState<string | null>(null)
+
+  // Load mission if editing
+  const missionIdParam = params.get("missionId") || null
+  useEffect(() => {
+    if (!missionIdParam) return
+    const mission = missions.find((m) => m.id === missionIdParam)
+    if (!mission) return
+    // Avoid unnecessary state updates
+    setEditingId((prev) => (prev === missionIdParam ? prev : missionIdParam))
+    setMissionName((prev) => (prev === mission.name ? prev : mission.name))
+    if (mission.waypointData && mission.waypointData.length > 0) {
+      setWaypoints((prev) => {
+        // shallow compare lengths as a simple guard
+        if (prev.length === mission.waypointData!.length) return prev
+        return mission.waypointData!.map((w) => ({ ...w }))
+      })
+    }
+  }, [missionIdParam, missions])
 
   const handleMapClick = (lat: number, lng: number) => {
     const newWaypoint: Waypoint = {
@@ -43,6 +73,73 @@ export function MissionPlanning() {
     setWaypoints([...waypoints, newWaypoint])
     setSelectedWaypoint(newWaypoint.id)
   }
+
+  useEffect(() => {
+    let destroyed = false
+    async function init() {
+      if (!mapEl.current) return
+      const L = (await import("leaflet")).default
+      if (destroyed) return
+      const map = L.map(mapEl.current, { zoomControl: true })
+      mapRef.current = map
+      const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors",
+      })
+      osm.addTo(map)
+      map.setView(mapCenter, mapZoom)
+      markersLayerRef.current = new (L as any).LayerGroup().addTo(map)
+      pathLayerRef.current = (L as any).polyline([], { color: "#16a34a", weight: 3, dashArray: "10,10", opacity: 0.7 }).addTo(map)
+
+      map.on("click", (e: any) => {
+        const { lat, lng } = e.latlng
+        handleMapClick(lat, lng)
+      })
+      const updateView = () => {
+        const c = map.getCenter()
+        setMapCenter([c.lat, c.lng])
+        setMapZoom(map.getZoom())
+      }
+      map.on("moveend", updateView)
+      map.on("zoomend", updateView)
+    }
+    init()
+    return () => {
+      destroyed = true
+      try { mapRef.current && mapRef.current.remove() } catch {}
+    }
+  }, [])
+
+  useEffect(() => {
+    async function refreshLayers() {
+      const L = (await import("leaflet")).default
+      if (!mapRef.current || !markersLayerRef.current || !pathLayerRef.current) return
+      markersLayerRef.current.clearLayers()
+      const latlngs: any[] = []
+      waypoints.forEach((wp, idx) => {
+        const marker = (L as any).marker([wp.lat, wp.lng], { draggable: true })
+        if (selectedWaypoint === wp.id) {
+          marker.bindPopup(`<b>Waypoint ${idx + 1}</b>`).openPopup()
+        } else {
+          marker.bindPopup(`Waypoint ${idx + 1}`)
+        }
+        marker.on("click", () => setSelectedWaypoint(wp.id))
+        marker.on("dragend", (e: any) => {
+          const { lat, lng } = e.target.getLatLng()
+          setWaypoints((prev) => prev.map((w) => (w.id === wp.id ? { ...w, lat, lng } : w)))
+        })
+        markersLayerRef.current.addLayer(marker)
+        latlngs.push([wp.lat, wp.lng])
+      })
+      pathLayerRef.current.setLatLngs(latlngs)
+      if (latlngs.length > 0) {
+        const bounds = (L as any).latLngBounds(latlngs)
+        if (bounds.isValid && bounds.isValid()) {
+          mapRef.current.fitBounds(bounds, { padding: [20, 20], maxZoom: 16 })
+        }
+      }
+    }
+    refreshLayers()
+  }, [waypoints, selectedWaypoint])
 
   const addWaypoint = () => {
     const lastWaypoint = waypoints[waypoints.length - 1]
@@ -90,17 +187,48 @@ export function MissionPlanning() {
   const totalDistance = calculateDistance()
   const estimatedTime = totalDistance > 0 ? (totalDistance / 0.005) * 60 : 0 // Assuming 5 m/s average speed
 
+  const handleSave = () => {
+    const payload = {
+      name: missionName.trim() || "Untitled Mission",
+      description: "Auto-created from Mission Planner",
+      waypoints: waypoints.length,
+      distance: Number(totalDistance.toFixed(2)),
+      duration: Math.max(0, Math.round(estimatedTime)),
+      status: "draft" as const,
+      waypointData: waypoints.map((w) => ({ ...w })),
+    }
+    if (editingId) {
+      updateMission(editingId, payload)
+      router.push("/missions")
+    } else {
+      const mission = addMission(payload)
+      router.push("/missions")
+    }
+  }
+
+  const handleStart = () => {
+    const payload = {
+      name: missionName.trim() || "Untitled Mission",
+      description: "Auto-created from Mission Planner",
+      waypoints: waypoints.length,
+      distance: Number(totalDistance.toFixed(2)),
+      duration: Math.max(0, Math.round(estimatedTime)),
+      status: "draft" as const,
+      waypointData: waypoints.map((w) => ({ ...w })),
+    }
+    if (editingId) {
+      updateMission(editingId, payload)
+      router.push(`/preflight?missionId=${editingId}`)
+    } else {
+      const mission = addMission(payload)
+      router.push(`/preflight?missionId=${mission.id}`)
+    }
+  }
+
   return (
     <div className="h-full flex">
       <div className="flex-1 relative">
-        <MapView
-          waypoints={waypoints}
-          selectedWaypoint={selectedWaypoint}
-          onWaypointClick={setSelectedWaypoint}
-          onMapClick={handleMapClick}
-          center={mapCenter}
-          zoom={mapZoom}
-        />
+        <div ref={mapEl} className="w-full h-full rounded-lg overflow-hidden border bg-muted" />
 
         {/* Map Info */}
         <div className="absolute bottom-4 left-4 bg-card/95 backdrop-blur-sm border border-border rounded-lg p-3 space-y-1 text-xs shadow-lg">
@@ -142,7 +270,7 @@ export function MissionPlanning() {
             <TabsContent value="mission" className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label>Mission Name</Label>
-                <Input placeholder="Enter mission name" defaultValue="Survey Mission 01" />
+                <Input placeholder="Enter mission name" value={missionName} onChange={(e) => setMissionName(e.target.value)} />
               </div>
 
               <div className="space-y-2">
@@ -314,11 +442,11 @@ export function MissionPlanning() {
           </Tabs>
 
           <div className="flex gap-2">
-            <Button className="flex-1 bg-transparent" variant="outline">
+            <Button className="flex-1 bg-transparent" variant="outline" onClick={handleSave}>
               <Save className="h-4 w-4 mr-2" />
               Save
             </Button>
-            <Button className="flex-1">
+            <Button className="flex-1" onClick={handleStart}>
               <Play className="h-4 w-4 mr-2" />
               Start Mission
             </Button>
