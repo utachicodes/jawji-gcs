@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { createMockTelemetry, type Telemetry } from "@/lib/telemetry"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { MapView } from "@/components/map-view"
@@ -14,7 +15,7 @@ export function UnifiedDashboard() {
   const { drones, selectedDrone } = useDroneStore()
   const activeDrone = drones.find((d) => d.id === selectedDrone)
 
-  const [telemetry, setTelemetry] = useState({
+  const [telemetry, setTelemetry] = useState<Telemetry>({
     altitude: 45.2,
     speed: 5.8,
     heading: 127,
@@ -30,23 +31,12 @@ export function UnifiedDashboard() {
     flightMode: "AUTO",
   })
 
-  // Simulate real-time telemetry updates
+  // Real-time telemetry via adapter (mock for now)
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTelemetry((prev) => ({
-        ...prev,
-        altitude: Math.max(0, prev.altitude + (Math.random() - 0.5) * 2),
-        speed: Math.max(0, prev.speed + (Math.random() - 0.5) * 0.5),
-        heading: (prev.heading + (Math.random() - 0.5) * 5 + 360) % 360,
-        pitch: Math.max(-15, Math.min(15, prev.pitch + (Math.random() - 0.5) * 0.5)),
-        roll: Math.max(-15, Math.min(15, prev.roll + (Math.random() - 0.5) * 0.5)),
-        latitude: prev.latitude + (Math.random() - 0.5) * 0.0001,
-        longitude: prev.longitude + (Math.random() - 0.5) * 0.0001,
-        flightTime: prev.flightTime + 1,
-      }))
-    }, 1000)
-
-    return () => clearInterval(interval)
+    const bus = createMockTelemetry({ battery: telemetry.battery, signal: telemetry.signal })
+    const unsub = bus.subscribe(setTelemetry)
+    return () => unsub()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const formatTime = (seconds: number) => {
@@ -56,7 +46,7 @@ export function UnifiedDashboard() {
   }
 
   const handleJoystickMove = (x: number, y: number) => {
-    console.log("[v0] Joystick move:", { x, y })
+    console.log("[JAWJI] Joystick move:", { x, y })
   }
 
   const [mapMode, setMapMode] = useState<"2D" | "3D">("2D")
@@ -65,8 +55,8 @@ export function UnifiedDashboard() {
     <div className="h-full w-full bg-background p-4 overflow-hidden">
       <div className="grid grid-cols-12 grid-rows-12 gap-4 h-full">
         {/* Main Video Feed - Top Left */}
-        <Card className="col-span-7 row-span-7 p-0 overflow-hidden border-border/40">
-          <div className="relative w-full h-full bg-black">
+        <Card className="col-span-7 row-span-7 p-0 overflow-hidden border-border/40 flex flex-col">
+          <div className="relative w-full flex-1 min-h-0 min-h-[300px] bg-black">
             {/* Video placeholder */}
             <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black" />
 
@@ -86,30 +76,30 @@ export function UnifiedDashboard() {
               {/* Top HUD Info */}
               <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
                 <div className="space-y-1 font-mono text-xs">
-                  <div className="bg-black/70 px-3 py-1.5 rounded border border-primary/30">
+                  <div className="bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded border border-primary/30">
                     <span className="text-primary">MODE:</span>{" "}
                     <span className="text-white font-bold">{telemetry.flightMode}</span>
                   </div>
-                  <div className="bg-black/70 px-3 py-1.5 rounded border border-green-500/30">
+                  <div className="bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded border border-green-500/30">
                     <span className="text-green-500">GPS:</span>{" "}
                     <span className="text-white">{telemetry.latitude.toFixed(6)}</span>
                   </div>
-                  <div className="bg-black/70 px-3 py-1.5 rounded border border-green-500/30">
+                  <div className="bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded border border-green-500/30">
                     <span className="text-green-500">GPS:</span>{" "}
                     <span className="text-white">{telemetry.longitude.toFixed(6)}</span>
                   </div>
                 </div>
 
                 <div className="space-y-1 font-mono text-xs text-right">
-                  <div className="bg-black/70 px-3 py-1.5 rounded border border-primary/30">
+                  <div className="bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded border border-primary/30">
                     <span className="text-primary">ALT:</span>{" "}
                     <span className="text-white font-bold">{telemetry.altitude.toFixed(1)}m</span>
                   </div>
-                  <div className="bg-black/70 px-3 py-1.5 rounded border border-primary/30">
+                  <div className="bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded border border-primary/30">
                     <span className="text-primary">SPD:</span>{" "}
                     <span className="text-white font-bold">{telemetry.speed.toFixed(1)}m/s</span>
                   </div>
-                  <div className="bg-black/70 px-3 py-1.5 rounded border border-primary/30">
+                  <div className="bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded border border-primary/30">
                     <span className="text-primary">HDG:</span>{" "}
                     <span className="text-white font-bold">{telemetry.heading.toFixed(0)}°</span>
                   </div>
@@ -147,16 +137,16 @@ export function UnifiedDashboard() {
 
               {/* Bottom Status Bar */}
               <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-                <div className="bg-black/70 px-4 py-2 rounded border border-primary/30 font-mono text-xs">
+                <div className="bg-black/50 backdrop-blur-sm px-4 py-2 rounded border border-primary/30 font-mono text-xs">
                   <span className="text-primary">TIME:</span>{" "}
                   <span className="text-white font-bold text-lg">{formatTime(telemetry.flightTime)}</span>
                 </div>
                 <div className="flex gap-2">
-                  <div className="bg-black/70 px-3 py-2 rounded border border-green-500/30 font-mono text-xs">
+                  <div className="bg-black/50 backdrop-blur-sm px-3 py-2 rounded border border-green-500/30 font-mono text-xs">
                     <span className="text-green-500">BAT:</span>{" "}
                     <span className="text-white font-bold">{telemetry.battery}%</span>
                   </div>
-                  <div className="bg-black/70 px-3 py-2 rounded border border-green-500/30 font-mono text-xs">
+                  <div className="bg-black/50 backdrop-blur-sm px-3 py-2 rounded border border-green-500/30 font-mono text-xs">
                     <span className="text-green-500">SIG:</span>{" "}
                     <span className="text-white font-bold">{telemetry.signal}%</span>
                   </div>
@@ -167,8 +157,8 @@ export function UnifiedDashboard() {
         </Card>
 
         {/* Map View - Top Right */}
-        <Card className="col-span-5 row-span-7 p-0 overflow-hidden border-border/40">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border/40">
+        <Card className="col-span-5 row-span-7 p-0 overflow-hidden border-border/40 flex flex-col">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 bg-card/60 backdrop-blur supports-[backdrop-filter]:bg-card/60">
             <div className="text-xs font-mono text-muted-foreground">MAP MODE</div>
             <div className="flex gap-1">
               <Button size="sm" variant={mapMode === "2D" ? "default" : "outline"} className="h-7" onClick={() => setMapMode("2D")}>
@@ -179,7 +169,7 @@ export function UnifiedDashboard() {
               </Button>
             </div>
           </div>
-          <div className="w-full h-full">
+          <div className="flex-1 min-h-0 min-h-[300px]">
             {mapMode === "2D" ? (
               <MapView
                 waypoints={[

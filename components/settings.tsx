@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { toast } from "sonner"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Save, RefreshCw, Download, Upload, Plus, Trash2, Edit, Battery, Signal } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -83,6 +84,7 @@ export default function Settings() {
       localStorage.setItem("jawji_profile", JSON.stringify(profile))
       localStorage.setItem("jawji_preferences", JSON.stringify(preferences))
       setHasChanges(false)
+      toast.success("Settings saved")
     } catch {}
   }
 
@@ -90,6 +92,7 @@ export default function Settings() {
     setProfile(defaultProfile)
     setPreferences(defaultPreferences)
     setHasChanges(true)
+    toast("Defaults restored. Click Save to persist.")
   }
 
   const handleExport = () => {
@@ -101,6 +104,7 @@ export default function Settings() {
     a.download = "jawji-config.json"
     a.click()
     URL.revokeObjectURL(url)
+    toast.success("Configuration exported")
   }
 
   const handleImport = async (file: File) => {
@@ -110,6 +114,7 @@ export default function Settings() {
       if (data.profile) setProfile(data.profile)
       if (data.preferences) setPreferences(data.preferences)
       setHasChanges(true)
+      toast.success("Configuration imported. Review and Save.")
     } catch {}
   }
 

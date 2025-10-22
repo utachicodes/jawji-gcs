@@ -12,6 +12,7 @@ import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useMissionStore } from "@/lib/mission-store"
+import { MapGeofence } from "@/components/map-geofence"
 
 interface Waypoint {
   id: string
@@ -42,6 +43,7 @@ export function MissionPlanning() {
   const [mapZoom, setMapZoom] = useState(15)
   const [missionName, setMissionName] = useState("Survey Mission 01")
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [geofence, setGeofence] = useState<string>("")
 
   // Load mission if editing
   const missionIdParam = params.get("missionId") || null
@@ -58,6 +60,9 @@ export function MissionPlanning() {
         if (prev.length === mission.waypointData!.length) return prev
         return mission.waypointData!.map((w) => ({ ...w }))
       })
+    }
+    if (mission.geofence) {
+      setGeofence(mission.geofence)
     }
   }, [missionIdParam, missions])
 
@@ -196,6 +201,7 @@ export function MissionPlanning() {
       duration: Math.max(0, Math.round(estimatedTime)),
       status: "draft" as const,
       waypointData: waypoints.map((w) => ({ ...w })),
+      geofence: geofence || undefined,
     }
     if (editingId) {
       updateMission(editingId, payload)
@@ -262,9 +268,10 @@ export function MissionPlanning() {
           </div>
 
           <Tabs defaultValue="mission" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="mission">Mission</TabsTrigger>
               <TabsTrigger value="waypoints">Waypoints</TabsTrigger>
+              <TabsTrigger value="geofence">Geofence</TabsTrigger>
             </TabsList>
 
             <TabsContent value="mission" className="space-y-4 mt-4">
@@ -438,6 +445,14 @@ export function MissionPlanning() {
                   </Card>
                 ))}
               </div>
+            </TabsContent>
+
+            <TabsContent value="geofence" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>Draw Geofence</Label>
+                <p className="text-xs text-muted-foreground">Use the map below to draw a polygon geofence. The GeoJSON will be saved with the mission.</p>
+              </div>
+              <MapGeofence value={geofence} onChange={setGeofence} />
             </TabsContent>
           </Tabs>
 

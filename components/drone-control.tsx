@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useEffect } from "react"
+import { toast } from "sonner"
 import { useGamepad } from "@/hooks/use-gamepad"
 import {
   Play,
@@ -23,6 +24,14 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { VirtualJoystick } from "@/components/virtual-joystick"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 export function DroneControl() {
   const [isArmed, setIsArmed] = useState(false)
@@ -31,6 +40,9 @@ export function DroneControl() {
   const [leftJoystick, setLeftJoystick] = useState({ x: 0, y: 0 })
   const [rightJoystick, setRightJoystick] = useState({ x: 0, y: 0 })
   const gp = useGamepad(true)
+
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pendingAction, setPendingAction] = useState<null | "arm" | "disarm" | "takeoff" | "land" | "rtl">(null)
 
   useEffect(() => {
     setLeftJoystick({ x: gp.left.x, y: -gp.left.y })
@@ -41,7 +53,42 @@ export function DroneControl() {
     setYaw([Math.max(-100, Math.min(100, yv))])
   }, [gp.left.x, gp.left.y, gp.right.x, gp.right.y])
 
+  const requestAction = (action: typeof pendingAction) => {
+    setPendingAction(action)
+    setConfirmOpen(true)
+  }
+
+  const runAction = () => {
+    if (!pendingAction) return
+    switch (pendingAction) {
+      case "arm":
+        setIsArmed(true)
+        toast.success("Drone armed")
+        break
+      case "disarm":
+        setIsArmed(false)
+        toast("Drone disarmed")
+        break
+      case "takeoff":
+        if (!isArmed) {
+          toast.error("Arm the drone before takeoff")
+          break
+        }
+        toast.success("Takeoff initiated")
+        break
+      case "land":
+        toast("Landing initiated")
+        break
+      case "rtl":
+        toast("Return-to-Home initiated")
+        break
+    }
+    setConfirmOpen(false)
+    setPendingAction(null)
+  }
+
   return (
+    <>
     <div className="h-full p-6 space-y-6 overflow-auto">
       {/* Control Mode Banner */}
       <div className="flex items-center justify-between p-4 bg-card border border-border rounded-lg">
@@ -87,7 +134,7 @@ export function DroneControl() {
                 <VirtualJoystick
                   onMove={(x, y) => {
                     setLeftJoystick({ x, y })
-                    console.log("[v0] Left joystick:", { x, y })
+                    console.log("[JAWJI] Left joystick:", { x, y })
                   }}
                 />
               </div>
@@ -96,7 +143,7 @@ export function DroneControl() {
                 <VirtualJoystick
                   onMove={(x, y) => {
                     setRightJoystick({ x, y })
-                    console.log("[v0] Right joystick:", { x, y })
+                    console.log("[JAWJI] Right joystick:", { x, y })
                   }}
                 />
               </div>
@@ -132,7 +179,7 @@ export function DroneControl() {
               <Button
                 variant={isArmed ? "destructive" : "default"}
                 className="h-16"
-                onClick={() => setIsArmed(!isArmed)}
+                onClick={() => requestAction(isArmed ? "disarm" : "arm")}
               >
                 {isArmed ? (
                   <>
@@ -146,15 +193,15 @@ export function DroneControl() {
                   </>
                 )}
               </Button>
-              <Button variant="outline" className="h-16 bg-transparent" disabled={!isArmed}>
+              <Button variant="outline" className="h-16 bg-transparent" onClick={() => requestAction("rtl")}>
                 <Home className="h-5 w-5 mr-2" />
                 Return Home
               </Button>
-              <Button variant="outline" className="h-16 bg-transparent" disabled={!isArmed}>
+              <Button variant="outline" className="h-16 bg-transparent" onClick={() => requestAction("takeoff")}>
                 <ArrowUp className="h-5 w-5 mr-2" />
                 Takeoff
               </Button>
-              <Button variant="outline" className="h-16 bg-transparent" disabled={!isArmed}>
+              <Button variant="outline" className="h-16 bg-transparent" onClick={() => requestAction("land")}>
                 <ArrowDown className="h-5 w-5 mr-2" />
                 Land
               </Button>
@@ -262,5 +309,26 @@ export function DroneControl() {
         </Card>
       </div>
     </div>
+
+    {/* Confirm action dialog */}
+    <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Confirm action</DialogTitle>
+          <DialogDescription>
+            {pendingAction === "arm" && "Arm the drone and enable motors."}
+            {pendingAction === "disarm" && "Disarm the drone. Motors will be disabled."}
+            {pendingAction === "takeoff" && "Initiate autonomous takeoff. Ensure safety checks are complete."}
+            {pendingAction === "land" && "Initiate landing at current location."}
+            {pendingAction === "rtl" && "Return to home. The drone will navigate back to the home position."}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={runAction}>Confirm</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

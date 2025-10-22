@@ -50,16 +50,16 @@ export function AppSidebar() {
                   asChild
                   isActive={active}
                   tooltip={item.title}
-                  className="h-11 group data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-accent/60 rounded-lg"
+                  className="h-11 group data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-accent/60 rounded-lg transition-colors"
                 >
                   <Link href={item.url}>
                     <div className="flex items-center gap-3 w-full">
-                      <div className={`flex items-center justify-center h-7 w-7 rounded-md border ${active ? 'bg-primary-foreground/10 border-primary-foreground/20' : 'bg-muted/50 border-border/60'}`}>
+                      <div className={`flex items-center justify-center h-7 w-7 rounded-md border ${active ? 'bg-primary-foreground/10 border-primary-foreground/20' : 'bg-muted/50 border-border/60'} transition-colors` }>
                         <Icon className="h-4 w-4" />
                       </div>
                       <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
                         <span className="text-sm font-medium">{item.title}</span>
-                        <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded ${active ? 'bg-primary-foreground/10' : 'bg-muted/50'}`}>{item.code}</span>
+                        <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded ${active ? 'bg-primary-foreground/10' : 'bg-muted/50'} transition-colors`}>{item.code}</span>
                       </div>
                     </div>
                   </Link>

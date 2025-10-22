@@ -24,7 +24,7 @@ export function EmergencyPanel() {
   }
 
   const executeEmergency = () => {
-    console.log("[v0] Emergency action executed:", emergencyAction)
+    console.log("[JAWJI] Emergency action executed:", emergencyAction)
     // Execute emergency command
     setShowConfirm(false)
   }
