@@ -139,6 +139,14 @@ export default function Settings() {
         </div>
         <div className="flex gap-2">
           <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={(e) => e.target.files && e.target.files[0] && handleImport(e.target.files[0])} />
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="h-4 w-4 mr-2" />
+            Import
+          </Button>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
           <Button variant="outline" onClick={handleReset}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Reset
@@ -521,6 +529,107 @@ export default function Settings() {
         </TabsContent>
 
         
+        <TabsContent value="camera" className="space-y-4 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Camera Settings</CardTitle>
+              <CardDescription>Configure video input and stream quality</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Video Source</Label>
+                <Select defaultValue="primary">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="primary">Primary Camera</SelectItem>
+                    <SelectItem value="secondary">Secondary Camera</SelectItem>
+                    <SelectItem value="simulated">Simulated Feed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Resolution</Label>
+                  <Select defaultValue="1080p">
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="720p">1280x720</SelectItem>
+                      <SelectItem value="1080p">1920x1080</SelectItem>
+                      <SelectItem value="4k">3840x2160</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Framerate (FPS)</Label>
+                  <Select defaultValue="30">
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="24">24</SelectItem>
+                      <SelectItem value="30">30</SelectItem>
+                      <SelectItem value="60">60</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Bitrate (kbps)</Label>
+                  <Input type="number" defaultValue="4000" onChange={() => setHasChanges(true)} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Stabilization</Label>
+                    <p className="text-sm text-muted-foreground">Enable digital video stabilization</p>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="system" className="space-y-4 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>System Settings</CardTitle>
+              <CardDescription>General application and data controls</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Enable Auto-Save</Label>
+                  <p className="text-sm text-muted-foreground">Automatically save configuration changes</p>
+                </div>
+                <Switch
+                  checked={preferences.autoSave}
+                  onCheckedChange={(checked) => {
+                    setPreferences({ ...preferences, autoSave: checked })
+                    setHasChanges(true)
+                  }}
+                />
+              </div>
+              <Separator />
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="h-4 w-4 mr-2" /> Import Config
+                </Button>
+                <Button variant="outline" onClick={handleExport}>
+                  <Download className="h-4 w-4 mr-2" /> Export Config
+                </Button>
+                <Button variant="outline" onClick={handleReset}>
+                  <RefreshCw className="h-4 w-4 mr-2" /> Reset to Defaults
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
       </Tabs>
     </div>
   )
