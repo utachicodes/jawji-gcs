@@ -258,7 +258,7 @@ export function MissionLibrary() {
       </div>
       {viewMode === "list" ? (
         <div className="w-full">
-          <div className="hidden md:grid grid-cols-12 px-3 py-2 text-xs text-muted-foreground border-b border-border/50">
+          <div className="hidden md:grid grid-cols-12 px-3 py-4 text-base text-muted-foreground border-b border-border/50">
             <div className="col-span-4">Name</div>
             <div className="col-span-2">Status</div>
             <div className="col-span-2">Waypoints</div>
@@ -268,20 +268,20 @@ export function MissionLibrary() {
           </div>
           <div className="divide-y divide-border/50">
             {filteredMissions.map((mission) => (
-              <div key={mission.id} className="grid grid-cols-12 items-center px-3 py-3 hover:bg-accent/40">
+              <div key={mission.id} className="group grid grid-cols-12 items-center px-3 py-4 hover:bg-accent hover:text-foreground">
                 <div className="col-span-12 md:col-span-4 min-w-0">
-                  <div className="font-medium truncate">{mission.name}</div>
-                  <div className="text-xs text-muted-foreground truncate">{mission.description}</div>
+                  <div className="text-base font-medium truncate">{mission.name}</div>
+                  <div className="text-sm text-muted-foreground group-hover:text-foreground truncate">{mission.description}</div>
                 </div>
                 <div className="col-span-6 md:col-span-2 mt-2 md:mt-0">
                   <Badge variant="outline" className={getStatusColor(mission.status)}>
                     {mission.status}
                   </Badge>
                 </div>
-                <div className="col-span-3 md:col-span-2 mt-2 md:mt-0 text-sm text-muted-foreground">{mission.waypoints}</div>
-                <div className="col-span-3 md:col-span-1 mt-2 md:mt-0 text-sm text-muted-foreground">{mission.duration}m</div>
-                <div className="col-span-3 md:col-span-1 mt-2 md:mt-0 text-sm text-muted-foreground">{mission.distance}km</div>
-                <div className="col-span-6 md:col-span-2 mt-2 md:mt-0 text-xs text-muted-foreground">{mission.lastModified}</div>
+                <div className="col-span-3 md:col-span-2 mt-2 md:mt-0 text-base text-muted-foreground group-hover:text-foreground">{mission.waypoints}</div>
+                <div className="col-span-3 md:col-span-1 mt-2 md:mt-0 text-base text-muted-foreground group-hover:text-foreground">{mission.duration}m</div>
+                <div className="col-span-3 md:col-span-1 mt-2 md:mt-0 text-base text-muted-foreground group-hover:text-foreground">{mission.distance}km</div>
+                <div className="col-span-6 md:col-span-2 mt-2 md:mt-0 text-sm text-muted-foreground group-hover:text-foreground">{mission.lastModified}</div>
                 <div className="col-span-6 md:col-span-12 md:justify-self-end mt-2 md:mt-0">
                   <div className="flex items-center gap-2">
                     <Button asChild size="sm" variant="outline" className="bg-transparent">

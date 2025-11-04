@@ -20,6 +20,7 @@ interface MapViewProps {
   onMapClick?: (lat: number, lng: number) => void
   center?: [number, number]
   zoom?: number
+  heading?: number
 }
 
 export function MapView({
@@ -29,6 +30,7 @@ export function MapView({
   onMapClick,
   center = [37.7749, -122.4194],
   zoom = 13,
+  heading,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [mapSize, setMapSize] = useState({ width: 0, height: 0 })
@@ -47,9 +49,19 @@ export function MapView({
       }
       updateSize()
       window.addEventListener("resize", updateSize)
-      return () => window.removeEventListener("resize", updateSize)
+      const ro = new ResizeObserver(() => updateSize())
+      ro.observe(containerRef.current)
+      return () => {
+        window.removeEventListener("resize", updateSize)
+        try { ro.disconnect() } catch {}
+      }
     }
   }, [])
+
+  useEffect(() => {
+    if (!center) return
+    setMapCenter(center)
+  }, [center])
 
   // Convert lat/lng to pixel coordinates
   const latLngToPixel = (lat: number, lng: number) => {
@@ -205,6 +217,8 @@ export function MapView({
                   width: `${tileSize}px`,
                   height: `${tileSize}px`,
                 }}
+                loading="lazy"
+                decoding="async"
               />
             )
           }),
@@ -246,18 +260,39 @@ export function MapView({
               zIndex: isSelected ? 3 : 2,
             }}
           >
-            <div
-              className={`flex items-center justify-center rounded-full font-bold text-sm transition-all ${
-                isSelected
-                  ? "w-10 h-10 bg-primary text-primary-foreground ring-4 ring-primary/30"
-                  : "w-8 h-8 bg-primary/80 text-primary-foreground"
-              }`}
-              style={{
-                boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-              }}
-            >
-              {index + 1}
-            </div>
+            {waypoint.action === "current" ? (
+              <div className="relative">
+                <span className="absolute inset-0 -m-2 rounded-full bg-primary/30 blur-md animate-ping" />
+                {/* Heading arrow */}
+                <div
+                  className="absolute left-1/2 -translate-x-1/2 -top-5"
+                  style={{ transform: `translateX(-50%) rotate(${(heading ?? 0)}deg)` }}
+                >
+                  <div className="w-0 h-0 border-l-4 border-r-4 border-b-8 border-l-transparent border-r-transparent border-b-primary drop-shadow" />
+                </div>
+                <div
+                  className={`flex items-center justify-center rounded-full font-bold text-sm transition-all ${
+                    isSelected
+                      ? "w-10 h-10 bg-primary text-primary-foreground ring-4 ring-primary/30"
+                      : "w-9 h-9 bg-primary text-primary-foreground"
+                  }`}
+                  style={{ boxShadow: "0 4px 12px rgba(0,0,0,0.35)" }}
+                >
+                  DRN
+                </div>
+              </div>
+            ) : (
+              <div
+                className={`flex items-center justify-center rounded-full font-bold text-sm transition-all ${
+                  isSelected
+                    ? "w-10 h-10 bg-primary text-primary-foreground ring-4 ring-primary/30"
+                    : "w-8 h-8 bg-primary/80 text-primary-foreground"
+                }`}
+                style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}
+              >
+                {index + 1}
+              </div>
+            )}
           </div>
         )
       })}

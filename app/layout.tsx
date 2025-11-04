@@ -49,7 +49,7 @@ export default function RootLayout({
             <PwaBootstrap />
           </ThemeProvider>
         </AuthSessionProvider>
-      </body>
+     </body>
     </html>
   )
 }

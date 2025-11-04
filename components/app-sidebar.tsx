@@ -37,7 +37,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-border/40 bg-[radial-gradient(50%_50%_at_50%_0%,_hsl(var(--primary)/0.08),_transparent_70%)]">
       <SidebarHeader className="border-b border-border/40 bg-card/60 backdrop-blur" />
       <SidebarContent className="bg-card/40">
-        <div className="px-3 pt-3 pb-1 text-[10px] tracking-[0.15em] text-muted-foreground font-mono group-data-[collapsible=icon]:hidden">
+        <div className="px-3 pt-3 pb-2 text-sm tracking-[0.15em] text-muted-foreground font-mono group-data-[collapsible=icon]:hidden">
           NAVIGATION
         </div>
         <SidebarMenu className="gap-1 p-2">
@@ -50,7 +50,7 @@ export function AppSidebar() {
                   asChild
                   isActive={active}
                   tooltip={item.title}
-                  className="h-11 group data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-accent/60 rounded-lg transition-colors"
+                  className="h-11 group data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-accent hover:text-foreground rounded-lg transition-colors"
                 >
                   <Link href={item.url}>
                     <div className="flex items-center gap-3 w-full">
@@ -59,7 +59,7 @@ export function AppSidebar() {
                       </div>
                       <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
                         <span className="text-sm font-medium">{item.title}</span>
-                        <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded ${active ? 'bg-primary-foreground/10' : 'bg-muted/50'} transition-colors`}>{item.code}</span>
+                        <span className={`${active ? 'bg-primary-foreground/10' : 'bg-muted/50'} font-mono text-[10px] px-1.5 py-0.5 rounded transition-colors`}>{item.code}</span>
                       </div>
                     </div>
                   </Link>

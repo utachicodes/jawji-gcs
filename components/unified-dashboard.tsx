@@ -50,6 +50,7 @@ export function UnifiedDashboard() {
   }
 
   const [mapMode, setMapMode] = useState<"2D" | "3D">("2D")
+  const [follow, setFollow] = useState<boolean>(true)
 
   return (
     <div className="h-full w-full bg-background p-4 overflow-hidden">
@@ -167,6 +168,9 @@ export function UnifiedDashboard() {
               <Button size="sm" variant={mapMode === "3D" ? "default" : "outline"} className="h-7" onClick={() => setMapMode("3D")}>
                 3D
               </Button>
+              <Button size="sm" variant={follow ? "default" : "outline"} className="h-7" onClick={() => setFollow((f) => !f)}>
+                {follow ? "Following" : "Follow"}
+              </Button>
             </div>
           </div>
           <div className="flex-1 min-h-0 min-h-[300px]">
@@ -183,8 +187,9 @@ export function UnifiedDashboard() {
                 ]}
                 selectedWaypoint="drone"
                 onWaypointClick={() => {}}
-                center={[telemetry.latitude, telemetry.longitude]}
+                center={follow ? [telemetry.latitude, telemetry.longitude] as [number, number] : undefined}
                 zoom={16}
+                heading={telemetry.heading}
               />
             ) : (
               <div className="p-2 h-full">
