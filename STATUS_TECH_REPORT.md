@@ -171,7 +171,7 @@ Prerequisites: Node.js LTS, npm
 
 npm install
 npm run dev
-# Visit http://localhost:3000
+# Visit https://jawji-ai.vercel.app/login
 
 No required environment variables for the current mock setup. When adding real telemetry/video endpoints, a .env.local will be introduced.
 
