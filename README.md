@@ -68,6 +68,38 @@ GITHUB_SECRET=...
 npm run dev
 ```
 
+### Ingest Endpoint Configuration
+
+Add the following environment variables to `.env.local` if you plan to POST telemetry to `/api/ingest`:
+
+```bash
+# Optional bearer or x-api-key token required by /api/ingest
+INGEST_TOKEN=your_secure_random_token
+
+# CORS origin allowed to call /api/ingest (default: *)
+INGEST_CORS_ORIGIN=*
+
+# Optional: absolute path to an external MQTT streamer module
+# The module should export one of: ingest, publish, send, or default (function)
+# Example (Windows): C:\Users\UtachiCodes\Documents\JAWJI\mqtt-streamer\mqtt-streamer\dist\index.js
+STREAMER_MODULE_PATH=
+```
+
+### Live Telemetry to UI
+
+- POST your telemetry to `/api/ingest` with `Authorization: Bearer $INGEST_TOKEN` and JSON body.
+- The server broadcasts it over an SSE stream at `/api/telemetry/stream`.
+- The client subscribes and updates the drone store in real time (`components/telemetry-bootstrap.tsx`).
+
+Example (PowerShell):
+
+```powershell
+curl -Method POST http://localhost:3000/api/ingest `
+  -H "Content-Type: application/json" `
+  -H "Authorization: Bearer $env:INGEST_TOKEN" `
+  -Body '{"droneId":"drone-1","battery":86,"signal":95,"location":{"lat":37.7749,"lng":-122.4194,"altitude":46.0}}'
+```
+
 ## Map Library Choice (Geofence & Waypoints)
 
 We will integrate **Leaflet + leaflet-draw** for geofence/waypoint editing.

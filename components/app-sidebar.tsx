@@ -34,8 +34,8 @@ export function AppSidebar() {
   const activeDrone = drones.find((d) => d.id === selectedDrone)
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border/40 bg-[radial-gradient(50%_50%_at_50%_0%,_hsl(var(--primary)/0.08),_transparent_70%)]">
-      <SidebarHeader className="border-b border-border/40 bg-card/60 backdrop-blur" />
+    <Sidebar collapsible="icon" className="border-r border-border/40 bg-[radial-gradient(50%_50%_at_50%_0%,_rgba(255,255,255,0.08),_transparent_70%)]">
+      <SidebarHeader className="border-b border-border/40 bg-card/60 backdrop-blur supports-[backdrop-filter]:bg-card/40" />
       <SidebarContent className="bg-card/40">
         <div className="px-3 pt-3 pb-2 text-sm tracking-[0.15em] text-muted-foreground font-mono group-data-[collapsible=icon]:hidden">
           NAVIGATION
@@ -50,16 +50,16 @@ export function AppSidebar() {
                   asChild
                   isActive={active}
                   tooltip={item.title}
-                  className="h-11 group data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-accent hover:text-foreground rounded-lg transition-colors"
+                  className="h-11 group data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-accent hover:text-foreground rounded-lg transition-colors border border-transparent hover:border-border/40"
                 >
                   <Link href={item.url}>
                     <div className="flex items-center gap-3 w-full">
-                      <div className={`flex items-center justify-center h-7 w-7 rounded-md border ${active ? 'bg-primary-foreground/10 border-primary-foreground/20' : 'bg-muted/50 border-border/60'} transition-colors` }>
+                      <div className={`flex items-center justify-center h-7 w-7 rounded-md border ${active ? 'bg-primary-foreground/10 border-primary-foreground/20' : 'bg-muted/50 border-border/60'} transition-colors shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]` }>
                         <Icon className="h-4 w-4" />
                       </div>
                       <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
                         <span className="text-sm font-medium">{item.title}</span>
-                        <span className={`${active ? 'bg-primary-foreground/10' : 'bg-muted/50'} font-mono text-[10px] px-1.5 py-0.5 rounded transition-colors`}>{item.code}</span>
+                        <span className={`${active ? 'bg-primary-foreground/10' : 'bg-muted/50'} font-mono text-[10px] px-1.5 py-0.5 rounded transition-colors border border-border/40`}>{item.code}</span>
                       </div>
                     </div>
                   </Link>
@@ -69,7 +69,7 @@ export function AppSidebar() {
           })}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter className="border-t border-border/40 bg-card/60 backdrop-blur">
+      <SidebarFooter className="border-t border-border/40 bg-card/60 backdrop-blur supports-[backdrop-filter]:bg-card/40">
         <div className="px-3 py-3 space-y-2 font-mono text-xs">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground group-data-[collapsible=icon]:hidden">LINK</span>

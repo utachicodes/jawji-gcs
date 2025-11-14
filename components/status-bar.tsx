@@ -55,7 +55,7 @@ export function StatusBar() {
   const currentDrone = drones.find((d: Drone) => d.id === selectedDrone)
 
   return (
-    <div className="h-16 md:h-20 border-b border-border bg-card flex items-center justify-between px-6">
+    <div className="h-16 md:h-20 border-b border-white/10 bg-card/60 backdrop-blur supports-[backdrop-filter]:bg-card/40 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.45)] flex items-center justify-between px-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={toggleSidebar}>
           <SidebarIcon className="h-4 w-4" />
@@ -67,12 +67,12 @@ export function StatusBar() {
 
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-sm font-medium">System Online</span>
+          <span className="text-sm font-medium text-foreground/90">System Online</span>
         </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-2">
+            <Button variant="outline" size="sm" className="gap-2">
               <span className="text-sm text-muted-foreground">Drone:</span>
               <span className="text-sm font-mono">{currentDrone?.name || "No Drone"}</span>
               <ChevronDown className="h-3 w-3" />

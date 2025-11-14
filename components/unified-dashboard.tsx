@@ -51,6 +51,7 @@ export function UnifiedDashboard() {
 
   const [mapMode, setMapMode] = useState<"2D" | "3D">("2D")
   const [follow, setFollow] = useState<boolean>(true)
+  const [recording] = useState<boolean>(true)
 
   return (
     <div className="h-full w-full bg-background p-4 overflow-hidden">
@@ -63,6 +64,14 @@ export function UnifiedDashboard() {
 
             {/* HUD Overlay */}
             <div className="absolute inset-0 pointer-events-none">
+              {/* 3x3 Grid */}
+              {["33.333%","66.666%"].map((pos) => (
+                <div key={`v-${pos}`} className="absolute top-0 bottom-0 w-px bg-white/10" style={{ left: pos }} />
+              ))}
+              {["33.333%","66.666%"].map((pos) => (
+                <div key={`h-${pos}`} className="absolute left-0 right-0 h-px bg-white/10" style={{ top: pos }} />
+              ))}
+
               {/* Crosshair */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                 <div className="relative w-12 h-12">
@@ -105,6 +114,39 @@ export function UnifiedDashboard() {
                     <span className="text-white font-bold">{telemetry.heading.toFixed(0)}°</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Recording indicator */}
+              {recording && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2">
+                  <div className="bg-black/60 backdrop-blur-sm border border-red-500/40 px-3 py-1.5 rounded-full font-mono text-xs flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                    <span className="text-white">{formatTime(telemetry.flightTime)}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Left camera stack */}
+              <div className="absolute top-4 left-4 bottom-4 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="px-2 py-1 rounded bg-black/60 border border-white/10 text-[10px] font-semibold text-white w-min">HDR</div>
+                  <div className="px-2 py-1 rounded bg-black/60 border border-white/10 text-[10px] text-muted-foreground w-min">4K • 24 FPS</div>
+                  <div className="px-2 py-1 rounded bg-black/60 border border-white/10 text-[10px] text-muted-foreground w-min">LEVEL</div>
+                  <div className="grid grid-cols-2 gap-1 w-[96px]">
+                    {[
+                      { k: "R", c: "#ef4444" },
+                      { k: "G", c: "#22c55e" },
+                      { k: "B", c: "#3b82f6" },
+                      { k: "Y", c: "#f59e0b" },
+                    ].map((item) => (
+                      <div key={item.k} className="flex items-center justify-between px-2 py-1 rounded bg-black/60 border border-white/10 text-[10px]">
+                        <span style={{ color: item.c as string }} className="font-semibold">{item.k}</span>
+                        <span className="text-muted-foreground">●</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="w-[110px] h-[64px] rounded border border-white/10 bg-gradient-to-b from-white/10 to-transparent" />
               </div>
 
               {/* Artificial Horizon */}
@@ -153,6 +195,9 @@ export function UnifiedDashboard() {
                   </div>
                 </div>
               </div>
+
+              {/* Subject box */}
+              <div className="absolute border-2 border-yellow-400/80 rounded-sm" style={{ width: 80, height: 60, left: "60%", top: "38%" }} />
             </div>
           </div>
         </Card>
@@ -266,27 +311,29 @@ export function UnifiedDashboard() {
           </div>
         </Card>
 
-        {/* Quick Actions - Bottom Right */}
-        <Card className="col-span-3 row-span-5 p-4 border-border/40">
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold font-mono text-primary">QUICK ACTIONS</h3>
-            <div className="space-y-2 font-mono text-xs">
-              <Button variant="outline" className="w-full justify-start h-10 bg-transparent" size="sm">
-                <span className="font-bold mr-2">RTL</span> Return to Launch
-              </Button>
-              <Button variant="outline" className="w-full justify-start h-10 bg-transparent" size="sm">
-                <span className="font-bold mr-2">HOLD</span> Hold Position
-              </Button>
-              <Button variant="outline" className="w-full justify-start h-10 bg-transparent" size="sm">
-                <span className="font-bold mr-2">AUTO</span> Auto Mode
-              </Button>
-              <Button variant="outline" className="w-full justify-start h-10 bg-transparent" size="sm">
-                <span className="font-bold mr-2">STAB</span> Stabilize
-              </Button>
-              <Button variant="destructive" className="w-full justify-start h-10 mt-4" size="sm">
-                <span className="font-bold mr-2">KILL</span> Emergency Stop
-              </Button>
+        {/* Compass Card - Bottom Right */}
+        <Card className="col-span-3 row-span-5 p-4 border-border/40 flex items-center justify-center">
+          <div className="relative w-56 h-56 rounded-full border border-border/50 bg-black/40">
+            {/* ticks */}
+            {[0,30,60,90,120,150,180,210,240,270,300,330].map((deg) => (
+              <div key={deg} className="absolute left-1/2 top-1/2 origin-bottom" style={{ transform: `rotate(${deg}deg) translate(-50%, -100%)` }}>
+                <div className="w-[2px] h-3 bg-white/30" />
+              </div>
+            ))}
+            {/* pointer */}
+            <div className="absolute inset-0 flex items-start justify-center pt-4" style={{ transform: `rotate(${telemetry.heading}deg)` }}>
+              <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[14px] border-l-transparent border-r-transparent border-b-red-500" />
             </div>
+            <div className="absolute inset-4 rounded-full border border-white/10" />
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+              <div className="text-3xl font-bold font-mono">{telemetry.heading.toFixed(0)}°</div>
+              <div className="text-xs text-muted-foreground">HEADING</div>
+            </div>
+            {/* cardinal letters */}
+            <div className="absolute left-1/2 -translate-x-1/2 top-1 text-xs font-semibold">N</div>
+            <div className="absolute right-1/2 translate-x-1/2 bottom-1 text-xs font-semibold">S</div>
+            <div className="absolute top-1/2 -translate-y-1/2 right-1 text-xs font-semibold">E</div>
+            <div className="absolute top-1/2 -translate-y-1/2 left-1 text-xs font-semibold">W</div>
           </div>
         </Card>
       </div>

@@ -11,9 +11,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <div className="flex h-screen w-full">
         <AppSidebar />
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          {/* Ambient background layer */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(1200px_600px_at_80%_-10%,_rgba(255,255,255,0.06),_transparent_70%),radial-gradient(900px_500px_at_0%_100%,_rgba(255,255,255,0.04),_transparent_70%)]"
+          />
           <StatusBar />
-          <main className="flex-1 overflow-auto relative">{children}</main>
+          <main className="flex-1 overflow-auto relative">
+            {/* Vignette edge fade for cinematic look */}
+            <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(80%_80%_at_50%_0%,_transparent_40%,_rgba(0,0,0,0.25)_100%)]" />
+            {children}
+          </main>
         </div>
       </div>
     </SidebarProvider>
