@@ -14,7 +14,7 @@ export function errorHandler(
   error: ApiError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void {
   // Log the error
   logger.error("API error occurred", {

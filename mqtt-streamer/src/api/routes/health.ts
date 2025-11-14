@@ -14,7 +14,7 @@ export function healthRoutes(deps: AppDependencies): Router {
    */
   router.get(
     "/",
-    asyncHandler(async (req: Request, res: Response) => {
+    asyncHandler(async (_req: Request, res: Response) => {
       const healthSummary = deps.mqttManager.getHealthSummary();
       
       res.json({
@@ -89,7 +89,7 @@ export function healthRoutes(deps: AppDependencies): Router {
    */
   router.get(
     "/devices/all",
-    asyncHandler(async (req: Request, res: Response) => {
+    asyncHandler(async (_req: Request, res: Response) => {
       const allHealth = deps.mqttManager.getAllDeviceHealth();
       
       const healthArray = Array.from(allHealth.entries()).map(([deviceId, health]) => ({

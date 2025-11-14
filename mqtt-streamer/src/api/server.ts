@@ -41,7 +41,7 @@ export function createServer(
   app.use(requestLogger);
 
   // Health check endpoint (before other routes)
-  app.get("/health", (req, res) => {
+  app.get("/health", (_req, res) => {
     const connectionSummary = dependencies.mqttManager.getStats();
     const systemHealth = uptimeTracker.getSystemHealth();
 
@@ -63,7 +63,7 @@ export function createServer(
   });
 
   // Root endpoint
-  app.get("/", (req, res) => {
+  app.get("/", (_req, res) => {
     res.json({
       service: "MQTT Streamer",
       version: "1.0.0",
@@ -80,7 +80,7 @@ export function createServer(
   app.use("/device-health", healthRoutes(dependencies));
 
   // Shutdown endpoint - triggers graceful shutdown for config reload
-  app.post("/shutdown", async (req, res) => {
+  app.post("/shutdown", async (_req, res) => {
     try {
       res.status(202).json({
         message: "Shutdown initiated. Server will restart to load new configuration.",

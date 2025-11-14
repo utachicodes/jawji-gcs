@@ -142,7 +142,7 @@ export function controlRoutes(deps: AppDependencies): Router {
   // Get all devices status
   router.get(
     "/status",
-    asyncHandler(async (req: Request, res: Response) => {
+    asyncHandler(async (_req: Request, res: Response) => {
       const mqttStats = deps.mqttManager.getStats();
       const deviceStatuses: Record<string, any> = {};
 

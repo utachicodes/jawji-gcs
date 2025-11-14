@@ -13,7 +13,7 @@ export function statusRoutes(deps: AppDependencies): Router {
   // Get overall system status
   router.get(
     "/",
-    asyncHandler(async (req: Request, res: Response) => {
+    asyncHandler(async (_req: Request, res: Response) => {
       const mqttStats = deps.mqttManager.getStats();
       const systemHealth = uptimeTracker.getSystemHealth();
 
@@ -43,7 +43,7 @@ export function statusRoutes(deps: AppDependencies): Router {
   // Get statistics for all devices
   router.get(
     "/stats",
-    asyncHandler(async (req: Request, res: Response) => {
+    asyncHandler(async (_req: Request, res: Response) => {
       const mqttStats = deps.mqttManager.getStats();
       const stats: Record<string, any> = {};
 
@@ -101,7 +101,7 @@ export function statusRoutes(deps: AppDependencies): Router {
   // Get MQTT connection summary
   router.get(
     "/mqtt",
-    asyncHandler(async (req: Request, res: Response) => {
+    asyncHandler(async (_req: Request, res: Response) => {
       const mqttStats = deps.mqttManager.getStats();
 
       res.json({
@@ -122,7 +122,7 @@ export function statusRoutes(deps: AppDependencies): Router {
   // Get streaming status
   router.get(
     "/stream",
-    asyncHandler(async (req: Request, res: Response) => {
+    asyncHandler(async (_req: Request, res: Response) => {
       const streamStats: Record<string, any> = {};
 
       for (const [deviceId, streamManager] of deps.streamManagers) {
@@ -139,7 +139,7 @@ export function statusRoutes(deps: AppDependencies): Router {
   // Get discovered topics for devices
   router.get(
     "/topics",
-    asyncHandler(async (req: Request, res: Response) => {
+    asyncHandler(async (_req: Request, res: Response) => {
       const mqttStats = deps.mqttManager.getStats();
       const topicsInfo: Record<string, any> = {};
 
