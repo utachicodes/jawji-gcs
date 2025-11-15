@@ -53,11 +53,12 @@ export function UnifiedDashboard() {
   const [recording] = useState<boolean>(true)
 
   return (
-    <div className="h-full w-full bg-background p-4 overflow-hidden">
-      <div className="grid grid-cols-12 grid-rows-12 gap-4 h-full">
-        {/* Main Video Feed - Top Left */}
-        <Card className="col-span-7 row-span-7 p-0 overflow-hidden border-border/40 flex flex-col">
-          <div className="relative w-full flex-1 min-h-0 min-h-[300px] bg-black">
+    <div className="h-full w-full bg-background p-2 sm:p-4 overflow-hidden">
+      <div className="flex flex-col gap-4 xl:gap-6">
+        <section className="grid gap-4 2xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:grid-cols-1">
+          {/* Main Video Feed */}
+          <Card className="p-0 overflow-hidden border-border/40 flex flex-col min-h-[320px] md:min-h-[360px]">
+            <div className="relative w-full flex-1 min-h-0 min-h-[260px] bg-black">
             {/* Video / live feed */}
             {hasLiveFeed ? (
               <div className="absolute inset-0">
@@ -225,125 +226,127 @@ export function UnifiedDashboard() {
               {/* Subject box */}
               <div className="absolute border-2 border-yellow-400/80 rounded-sm" style={{ width: 80, height: 60, left: "60%", top: "38%" }} />
             </div>
-          </div>
-        </Card>
+            </div>
+          </Card>
 
-        {/* Map View - Top Right */}
-        <Card className="col-span-5 row-span-7 p-0 overflow-hidden border-border/40 flex flex-col">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 bg-card/60 backdrop-blur supports-[backdrop-filter]:bg-card/60">
-            <div className="text-xs font-mono text-muted-foreground">MAP MODE</div>
-            <div className="flex gap-1">
-              <Button size="sm" variant={mapMode === "2D" ? "default" : "outline"} className="h-7" onClick={() => setMapMode("2D")}>
-                2D
+          {/* Map View */}
+          <Card className="p-0 overflow-hidden border-border/40 flex flex-col min-h-[280px] md:min-h-[340px]">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 bg-card/60 backdrop-blur supports-[backdrop-filter]:bg-card/60 flex-wrap gap-2">
+              <div className="text-xs font-mono text-muted-foreground uppercase tracking-[0.2em]">MAP MODE</div>
+              <div className="flex gap-1 flex-wrap">
+                <Button size="sm" variant={mapMode === "2D" ? "default" : "outline"} className="h-8 px-3" onClick={() => setMapMode("2D")}>
+                  2D
+                </Button>
+                <Button size="sm" variant={mapMode === "3D" ? "default" : "outline"} className="h-8 px-3" onClick={() => setMapMode("3D")}>
+                  3D
+                </Button>
+                <Button size="sm" variant={follow ? "default" : "outline"} className="h-8 px-3" onClick={() => setFollow((f) => !f)}>
+                  {follow ? "Following" : "Follow"}
+                </Button>
+              </div>
+            </div>
+            <div className="flex-1 min-h-0 min-h-[240px]">
+              {mapMode === "2D" ? (
+                <MapView
+                  waypoints={currentWaypoints}
+                  selectedWaypoint={hasLocation ? "drone" : null}
+                  onWaypointClick={() => {}}
+                  center={follow && hasLocation ? mapCenter : undefined}
+                  zoom={16}
+                  heading={telemetry.heading}
+                />
+              ) : (
+                <div className="p-2 h-full">
+                  <MapView3D waypoints={currentWaypoints} />
+                </div>
+              )}
+            </div>
+          </Card>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-3 md:grid-cols-2 sm:grid-cols-1">
+          {/* Telemetry Data */}
+          <Card className="p-4 border-border/40 min-h-[260px]">
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold font-mono text-primary">TELEMETRY DATA</h3>
+              <div className="grid grid-cols-2 gap-3 font-mono text-xs sm:text-sm">
+                <div className="space-y-1">
+                  <div className="text-muted-foreground">ALTITUDE</div>
+                  <div className="text-xl md:text-2xl font-bold">{telemetry.altitude.toFixed(1)}</div>
+                  <div className="text-muted-foreground">meters AGL</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-muted-foreground">SPEED</div>
+                  <div className="text-xl md:text-2xl font-bold">{telemetry.speed.toFixed(1)}</div>
+                  <div className="text-muted-foreground">m/s</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-muted-foreground">HEADING</div>
+                  <div className="text-xl md:text-2xl font-bold">{telemetry.heading.toFixed(0)}°</div>
+                  <div className="text-muted-foreground">true north</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-muted-foreground">TEMPERATURE</div>
+                  <div className="text-xl md:text-2xl font-bold">{telemetry.temperature}°</div>
+                  <div className="text-muted-foreground">celsius</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-muted-foreground">PITCH</div>
+                  <div className="text-xl md:text-2xl font-bold">{telemetry.pitch.toFixed(1)}°</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-muted-foreground">ROLL</div>
+                  <div className="text-xl md:text-2xl font-bold">{telemetry.roll.toFixed(1)}°</div>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Flight Controls */}
+          <Card className="p-4 border-border/40 flex flex-col items-center justify-center gap-4">
+            <h3 className="text-sm font-semibold font-mono text-primary">MANUAL CONTROL</h3>
+            <div className="w-full max-w-xs">
+              <VirtualJoystick onMove={handleJoystickMove} />
+            </div>
+            <div className="grid grid-cols-2 gap-2 w-full max-w-xs font-mono text-xs">
+              <Button variant="outline" size="sm" className="h-12 bg-transparent">
+                ARM
               </Button>
-              <Button size="sm" variant={mapMode === "3D" ? "default" : "outline"} className="h-7" onClick={() => setMapMode("3D")}>
-                3D
+              <Button variant="outline" size="sm" className="h-12 bg-transparent">
+                DISARM
               </Button>
-              <Button size="sm" variant={follow ? "default" : "outline"} className="h-7" onClick={() => setFollow((f) => !f)}>
-                {follow ? "Following" : "Follow"}
+              <Button variant="outline" size="sm" className="h-12 bg-transparent">
+                TAKEOFF
+              </Button>
+              <Button variant="outline" size="sm" className="h-12 bg-transparent">
+                LAND
               </Button>
             </div>
-          </div>
-          <div className="flex-1 min-h-0 min-h-[300px]">
-            {mapMode === "2D" ? (
-              <MapView
-                waypoints={currentWaypoints}
-                selectedWaypoint={hasLocation ? "drone" : null}
-                onWaypointClick={() => {}}
-                center={follow && hasLocation ? mapCenter : undefined}
-                zoom={16}
-                heading={telemetry.heading}
-              />
-            ) : (
-              <div className="p-2 h-full">
-                <MapView3D waypoints={currentWaypoints} />
-              </div>
-            )}
-          </div>
-        </Card>
+          </Card>
 
-        {/* Telemetry Data - Bottom Left */}
-        <Card className="col-span-5 row-span-5 p-4 border-border/40">
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold font-mono text-primary">TELEMETRY DATA</h3>
-            <div className="grid grid-cols-2 gap-3 font-mono text-xs">
-              <div className="space-y-1">
-                <div className="text-muted-foreground">ALTITUDE</div>
-                <div className="text-2xl font-bold">{telemetry.altitude.toFixed(1)}</div>
-                <div className="text-muted-foreground">meters AGL</div>
+          {/* Compass */}
+          <Card className="p-4 border-border/40 flex items-center justify-center">
+            <div className="relative w-56 h-56 rounded-full border border-border/50 bg-black/40">
+              {[0,30,60,90,120,150,180,210,240,270,300,330].map((deg) => (
+                <div key={deg} className="absolute left-1/2 top-1/2 origin-bottom" style={{ transform: `rotate(${deg}deg) translate(-50%, -100%)` }}>
+                  <div className="w-[2px] h-3 bg-white/30" />
+                </div>
+              ))}
+              <div className="absolute inset-0 flex items-start justify-center pt-4" style={{ transform: `rotate(${telemetry.heading}deg)` }}>
+                <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[14px] border-l-transparent border-r-transparent border-b-red-500" />
               </div>
-              <div className="space-y-1">
-                <div className="text-muted-foreground">SPEED</div>
-                <div className="text-2xl font-bold">{telemetry.speed.toFixed(1)}</div>
-                <div className="text-muted-foreground">m/s</div>
+              <div className="absolute inset-4 rounded-full border border-white/10" />
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+                <div className="text-3xl font-bold font-mono">{telemetry.heading.toFixed(0)}°</div>
+                <div className="text-xs text-muted-foreground">HEADING</div>
               </div>
-              <div className="space-y-1">
-                <div className="text-muted-foreground">HEADING</div>
-                <div className="text-2xl font-bold">{telemetry.heading.toFixed(0)}°</div>
-                <div className="text-muted-foreground">true north</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-muted-foreground">TEMPERATURE</div>
-                <div className="text-2xl font-bold">{telemetry.temperature}°</div>
-                <div className="text-muted-foreground">celsius</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-muted-foreground">PITCH</div>
-                <div className="text-2xl font-bold">{telemetry.pitch.toFixed(1)}°</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-muted-foreground">ROLL</div>
-                <div className="text-2xl font-bold">{telemetry.roll.toFixed(1)}°</div>
-              </div>
+              <div className="absolute left-1/2 -translate-x-1/2 top-1 text-xs font-semibold">N</div>
+              <div className="absolute right-1/2 translate-x-1/2 bottom-1 text-xs font-semibold">S</div>
+              <div className="absolute top-1/2 -translate-y-1/2 right-1 text-xs font-semibold">E</div>
+              <div className="absolute top-1/2 -translate-y-1/2 left-1 text-xs font-semibold">W</div>
             </div>
-          </div>
-        </Card>
-
-        {/* Flight Controls - Bottom Center */}
-        <Card className="col-span-4 row-span-5 p-4 border-border/40 flex flex-col items-center justify-center gap-4">
-          <h3 className="text-sm font-semibold font-mono text-primary">MANUAL CONTROL</h3>
-          <VirtualJoystick onMove={handleJoystickMove} />
-          <div className="grid grid-cols-2 gap-2 w-full max-w-xs font-mono text-xs">
-            <Button variant="outline" size="sm" className="h-12 bg-transparent">
-              ARM
-            </Button>
-            <Button variant="outline" size="sm" className="h-12 bg-transparent">
-              DISARM
-            </Button>
-            <Button variant="outline" size="sm" className="h-12 bg-transparent">
-              TAKEOFF
-            </Button>
-            <Button variant="outline" size="sm" className="h-12 bg-transparent">
-              LAND
-            </Button>
-          </div>
-        </Card>
-
-        {/* Compass Card - Bottom Right */}
-        <Card className="col-span-3 row-span-5 p-4 border-border/40 flex items-center justify-center">
-          <div className="relative w-56 h-56 rounded-full border border-border/50 bg-black/40">
-            {/* ticks */}
-            {[0,30,60,90,120,150,180,210,240,270,300,330].map((deg) => (
-              <div key={deg} className="absolute left-1/2 top-1/2 origin-bottom" style={{ transform: `rotate(${deg}deg) translate(-50%, -100%)` }}>
-                <div className="w-[2px] h-3 bg-white/30" />
-              </div>
-            ))}
-            {/* pointer */}
-            <div className="absolute inset-0 flex items-start justify-center pt-4" style={{ transform: `rotate(${telemetry.heading}deg)` }}>
-              <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[14px] border-l-transparent border-r-transparent border-b-red-500" />
-            </div>
-            <div className="absolute inset-4 rounded-full border border-white/10" />
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-              <div className="text-3xl font-bold font-mono">{telemetry.heading.toFixed(0)}°</div>
-              <div className="text-xs text-muted-foreground">HEADING</div>
-            </div>
-            {/* cardinal letters */}
-            <div className="absolute left-1/2 -translate-x-1/2 top-1 text-xs font-semibold">N</div>
-            <div className="absolute right-1/2 translate-x-1/2 bottom-1 text-xs font-semibold">S</div>
-            <div className="absolute top-1/2 -translate-y-1/2 right-1 text-xs font-semibold">E</div>
-            <div className="absolute top-1/2 -translate-y-1/2 left-1 text-xs font-semibold">W</div>
-          </div>
-        </Card>
+          </Card>
+        </section>
       </div>
     </div>
   )
