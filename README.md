@@ -100,6 +100,22 @@ curl -Method POST http://localhost:3000/api/ingest `
   -Body '{"droneId":"drone-1","battery":86,"signal":95,"location":{"lat":37.7749,"lng":-122.4194,"altitude":46.0}}'
 ```
 
+### Live Camera Feed
+
+- The unified dashboard will render real video when a telemetry message includes `videoUrl`, `streamUrl`, or `metadata.camera.streamUrl`.
+- Configure a fallback stream for development by setting `NEXT_PUBLIC_DEFAULT_VIDEO_STREAM=https://your-cdn/live/drone.m3u8` in `.env.local`.
+- Sample payload:
+  ```json
+  {
+    "droneId": "jawji-001",
+    "battery": 86,
+    "signal": 95,
+    "location": { "lat": 37.7749, "lng": -122.4194, "altitude": 46.0 },
+    "videoUrl": "https://cdn.example.com/live/jawji-001.m3u8"
+  }
+  ```
+- When no feed is present the UI shows an “Awaiting live feed” placeholder instead of simulated imagery.
+
 ## Map Library Choice (Geofence & Waypoints)
 
 We will integrate **Leaflet + leaflet-draw** for geofence/waypoint editing.

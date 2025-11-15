@@ -87,12 +87,10 @@ UI/UX Highlights
 ---
 
 Telemetry & Data
-- Mock Telemetry Bus (lib/telemetry.ts)
-  - Produces a continuous stream of Telemetry updates (altitude, speed, heading, GPS, flight time, battery, signal)
-  - Simple subscribe/unsubscribe API; easy to replace with ROS/WebSocket/SSE
-- Dashboard Integration (components/unified-dashboard.tsx)
-  - Subscribes to telemetry bus in useEffect() and updates HUD/Map
-  - Ready to swap createMockTelemetry() for a real source
+- `/api/ingest` now normalizes MQTT streamer payloads and fans them out over `/api/telemetry/stream` (SSE).
+- `components/telemetry-bootstrap.tsx` listens once, upserts drones in the Zustand store, and auto-selects the first live drone.
+- `lib/telemetry.ts` exposes a pure helper to derive HUD-ready metrics from the store (no more mock simulator).
+- Unified dashboard renders real telemetry plus an optional live camera feed supplied via `videoUrl` in the payload (or a default stream env var).
 
 Planned integration when ROS bag is available:
 - A createRosTelemetry() that replays telemetry from a bag (or forwards via WebSocket)

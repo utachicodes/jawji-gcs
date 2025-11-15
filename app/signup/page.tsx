@@ -169,10 +169,15 @@ export default function SignupPage() {
               checked={formData.agreeToTerms}
               onCheckedChange={(checked) => setFormData({ ...formData, agreeToTerms: checked as boolean })}
             />
-            <label htmlFor="terms" className="text-sm text-muted-foreground leading-none">
-              I agree to the <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link> and
-              {" "}
-              <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+            <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed">
+              I agree to the{" "}
+              <Link href="/terms" className="text-primary hover:underline" target="_blank" rel="noreferrer">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-primary hover:underline" target="_blank" rel="noreferrer">
+                Privacy Policy
+              </Link>
             </label>
           </div>
 

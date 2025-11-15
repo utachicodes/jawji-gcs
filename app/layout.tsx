@@ -37,7 +37,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className="dark">
-      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+      <body className={`min-h-screen bg-background text-foreground antialiased font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <AuthSessionProvider>
           <ThemeProvider defaultTheme="dark" storageKey="jawji-theme">
             <Suspense fallback={null}>

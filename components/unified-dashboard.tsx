@@ -1,43 +1,42 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { createMockTelemetry, type Telemetry } from "@/lib/telemetry"
+import { useMemo, useState } from "react"
+import { deriveTelemetry } from "@/lib/telemetry"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { MapView } from "@/components/map-view"
 import { MapView3D } from "@/components/map-view-3d"
 import { VirtualJoystick } from "@/components/virtual-joystick"
 import { useDroneStore } from "@/lib/drone-store"
- 
+
+const DEFAULT_STREAM_URL = process.env.NEXT_PUBLIC_DEFAULT_VIDEO_STREAM || ""
 
 export function UnifiedDashboard() {
   // <CHANGE> Fixed to use selectedDrone instead of activeDroneId
   const { drones, selectedDrone } = useDroneStore()
   const activeDrone = drones.find((d) => d.id === selectedDrone)
 
-  const [telemetry, setTelemetry] = useState<Telemetry>({
-    altitude: 45.2,
-    speed: 5.8,
-    heading: 127,
-    battery: activeDrone?.battery || 87,
-    signal: activeDrone?.signal || 92,
-    temperature: 24,
-    pitch: 2.3,
-    roll: -1.2,
-    yaw: 127,
-    latitude: 37.7749,
-    longitude: -122.4194,
-    flightTime: 342,
-    flightMode: "AUTO",
-  })
-
-  // Real-time telemetry via adapter (mock for now)
-  useEffect(() => {
-    const bus = createMockTelemetry({ battery: telemetry.battery, signal: telemetry.signal })
-    const unsub = bus.subscribe(setTelemetry)
-    return () => unsub()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const telemetry = useMemo(() => deriveTelemetry(activeDrone), [activeDrone])
+  const liveFeedUrl = (activeDrone?.videoUrl || DEFAULT_STREAM_URL || "").trim() || null
+  const hasLiveFeed = Boolean(liveFeedUrl)
+  const location = activeDrone?.location
+  const hasLocation = Boolean(location && Number.isFinite(location.lat) && Number.isFinite(location.lng))
+  const latText = hasLocation ? location!.lat.toFixed(6) : "—"
+  const lngText = hasLocation ? location!.lng.toFixed(6) : "—"
+  const altitudeValue = Number.isFinite(location?.altitude) ? (location?.altitude as number) : telemetry.altitude
+  const waypointAltitude = Number.isFinite(location?.altitude) ? (location?.altitude as number) : telemetry.altitude
+  const currentWaypoints = hasLocation
+    ? [
+        {
+          id: "drone",
+          lat: location!.lat,
+          lng: location!.lng,
+          altitude: waypointAltitude,
+          action: "current",
+        },
+      ]
+    : []
+  const mapCenter = hasLocation ? ([location!.lat, location!.lng] as [number, number]) : undefined
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -59,8 +58,35 @@ export function UnifiedDashboard() {
         {/* Main Video Feed - Top Left */}
         <Card className="col-span-7 row-span-7 p-0 overflow-hidden border-border/40 flex flex-col">
           <div className="relative w-full flex-1 min-h-0 min-h-[300px] bg-black">
-            {/* Video placeholder */}
-            <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black" />
+            {/* Video / live feed */}
+            {hasLiveFeed ? (
+              <div className="absolute inset-0">
+                <video
+                  key={liveFeedUrl}
+                  src={liveFeedUrl!}
+                  className="h-full w-full object-cover"
+                  autoPlay
+                  playsInline
+                  muted
+                  controls
+                  poster="/placeholder.jpg"
+                />
+                <div className="absolute top-4 left-4 z-10 pointer-events-none">
+                  <span className="bg-black/70 border border-red-500/60 text-red-400 text-[10px] font-semibold tracking-[0.2em] px-3 py-1 rounded-full">
+                    LIVE FEED
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
+                <div className="text-center space-y-2">
+                  <p className="text-white/80 font-mono uppercase tracking-[0.3em] text-xs">Awaiting live feed</p>
+                  <p className="text-white/60 text-xs max-w-xs mx-auto">
+                    Provide a `videoUrl` in the incoming telemetry payload or set `NEXT_PUBLIC_DEFAULT_VIDEO_STREAM` to render the camera feed.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* HUD Overlay */}
             <div className="absolute inset-0 pointer-events-none">
@@ -92,18 +118,18 @@ export function UnifiedDashboard() {
                   </div>
                   <div className="bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded border border-green-500/30">
                     <span className="text-green-500">GPS:</span>{" "}
-                    <span className="text-white">{telemetry.latitude.toFixed(6)}</span>
+                    <span className="text-white">{latText}</span>
                   </div>
                   <div className="bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded border border-green-500/30">
                     <span className="text-green-500">GPS:</span>{" "}
-                    <span className="text-white">{telemetry.longitude.toFixed(6)}</span>
+                    <span className="text-white">{lngText}</span>
                   </div>
                 </div>
 
                 <div className="space-y-1 font-mono text-xs text-right">
                   <div className="bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded border border-primary/30">
                     <span className="text-primary">ALT:</span>{" "}
-                    <span className="text-white font-bold">{telemetry.altitude.toFixed(1)}m</span>
+                    <span className="text-white font-bold">{altitudeValue.toFixed(1)}m</span>
                   </div>
                   <div className="bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded border border-primary/30">
                     <span className="text-primary">SPD:</span>{" "}
@@ -221,34 +247,16 @@ export function UnifiedDashboard() {
           <div className="flex-1 min-h-0 min-h-[300px]">
             {mapMode === "2D" ? (
               <MapView
-                waypoints={[
-                  {
-                    id: "drone",
-                    lat: telemetry.latitude,
-                    lng: telemetry.longitude,
-                    altitude: telemetry.altitude,
-                    action: "current",
-                  },
-                ]}
-                selectedWaypoint="drone"
+                waypoints={currentWaypoints}
+                selectedWaypoint={hasLocation ? "drone" : null}
                 onWaypointClick={() => {}}
-                center={follow ? [telemetry.latitude, telemetry.longitude] as [number, number] : undefined}
+                center={follow && hasLocation ? mapCenter : undefined}
                 zoom={16}
                 heading={telemetry.heading}
               />
             ) : (
               <div className="p-2 h-full">
-                <MapView3D
-                  waypoints={[
-                    {
-                      id: "drone",
-                      lat: telemetry.latitude,
-                      lng: telemetry.longitude,
-                      altitude: telemetry.altitude,
-                      action: "current",
-                    },
-                  ]}
-                />
+                <MapView3D waypoints={currentWaypoints} />
               </div>
             )}
           </div>
