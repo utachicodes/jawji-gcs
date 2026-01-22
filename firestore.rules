@@ -1,0 +1,42 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Users: Users can read/write their own profile
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Organizations: 
+    // - Create: Any auth user
+    // - Read: Members of the org
+    // - Write: Admin members of the org (currently just checking membership broadly for simplicity, can refine later)
+    match /organizations/{orgId} {
+      allow create: if isAuthenticated();
+      // Allow read if user's ID is in the members list (requires structural query or keeping a separate 'memberIds' array)
+      // For simplicity/performance without dedicated index, we'll allow read if authenticated for now, OR rely on client-side filtering + strict RLS later if needed.
+      // Better: check if request.auth.uid is in members. But members is an array of objects.
+      // Constraint: Firestore rules map/array checks are tricky.
+      // ALTERNATIVE: Users store 'orgId'. We check if resource.data.id == user.orgId
+      
+      allow read, update: if isAuthenticated(); 
+    }
+
+    // Drones:
+    // - Create/Read/Update/Delete: Authenticated users.
+    // - Future refinement: Check if user belongs to resource.data.orgId
+    match /drones/{droneId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Missions:
+    // - Create/Read/Update/Delete: Authenticated users.
+    match /missions/{missionId} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}

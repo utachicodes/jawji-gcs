@@ -12,11 +12,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { loginWithGoogle, loginWithGithub } from "@/lib/auth-service"
 
 export default function LoginPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -53,17 +55,56 @@ export default function LoginPage() {
             type="button"
             variant="outline"
             className="h-12 text-base bg-transparent"
-            onClick={() => signIn("google", { callbackUrl: "/" })}
+            disabled={isLoading}
+            onClick={async () => {
+              if (isLoading) return
+              setIsLoading(true)
+              setError(null)
+              try {
+                await loginWithGoogle()
+                router.push("/")
+              } catch (e: any) {
+                console.error(e)
+                // Friendly error message for popup cancellation
+                if (e.code === 'auth/cancelled-popup-request') {
+                  setError("Sign-in cancelled. Please ensure the popup wasn't blocked.")
+                } else if (e.code === 'auth/popup-closed-by-user') {
+                  setError("Sign-in window was closed.")
+                } else {
+                  setError(e.message || "An error occurred during sign in")
+                }
+                setIsLoading(false)
+              }
+            }}
           >
-            <Mail className="h-5 w-5 mr-2" /> Continue with Google
+            {isLoading ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Mail className="h-5 w-5 mr-2" />}
+            Continue with Google
           </Button>
           <Button
             type="button"
             variant="outline"
             className="h-12 text-base bg-transparent"
-            onClick={() => signIn("github", { callbackUrl: "/" })}
+            disabled={isLoading}
+            onClick={async () => {
+              if (isLoading) return
+              setIsLoading(true)
+              setError(null)
+              try {
+                await loginWithGithub()
+                router.push("/")
+              } catch (e: any) {
+                console.error(e)
+                if (e.code === 'auth/cancelled-popup-request') {
+                  setError("Sign-in cancelled. Check if your browser blocked the popup, or if the GitHub Client ID is correct.")
+                } else {
+                  setError(e.message || "An error occurred during sign in")
+                }
+                setIsLoading(false)
+              }
+            }}
           >
-            <Github className="h-5 w-5 mr-2" /> Continue with GitHub
+            {isLoading ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Github className="h-5 w-5 mr-2" />}
+            Continue with GitHub
           </Button>
         </div>
         <div className="flex items-center gap-4 mb-8">
@@ -129,6 +170,13 @@ export default function LoginPage() {
               "Sign in"
             )}
           </Button>
+
+          {/* Error Message Display */}
+          {error && (
+            <div className="p-3 text-sm text-red-500 bg-red-50/10 border border-red-500/20 rounded-md text-center animate-in fade-in slide-in-from-top-2">
+              {error}
+            </div>
+          )}
 
           <p className="text-sm text-center text-muted-foreground">
             Don't have an account? <Link href="/signup" className="text-primary hover:underline font-medium">Join us</Link>

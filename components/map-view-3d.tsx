@@ -1,7 +1,13 @@
 "use client"
 
-import type React from "react"
-import { useEffect, useMemo, useRef } from "react"
+import React, { useEffect, useState, useRef } from "react"
+import { Viewer, Entity, CameraFlyTo, PolylineGraphics, PointGraphics, ModelGraphics } from "resium"
+import * as Cesium from "cesium"
+
+// Point Cesium directly to CDN to avoid complex Webpack/Next.js asset copying
+if (typeof window !== "undefined") {
+  (window as any).CESIUM_BASE_URL = "https://unpkg.com/cesium@1.114.0/Build/Cesium/";
+}
 
 interface Waypoint {
   id: string
@@ -12,88 +18,112 @@ interface Waypoint {
   speed?: number
 }
 
-export function MapView3D({ waypoints }: { waypoints: Waypoint[] }) {
-  const containerRef = useRef<HTMLDivElement>(null)
+interface MapView3DProps {
+  waypoints: Waypoint[]
+}
 
-  const bounds = useMemo(() => {
-    if (!waypoints || waypoints.length === 0) return { minLat: 0, maxLat: 1, minLng: 0, maxLng: 1, minAlt: 0, maxAlt: 1 }
-    let minLat = Infinity,
-      maxLat = -Infinity,
-      minLng = Infinity,
-      maxLng = -Infinity,
-      minAlt = Infinity,
-      maxAlt = -Infinity
-    for (const w of waypoints) {
-      minLat = Math.min(minLat, w.lat)
-      maxLat = Math.max(maxLat, w.lat)
-      minLng = Math.min(minLng, w.lng)
-      maxLng = Math.max(maxLng, w.lng)
-      minAlt = Math.min(minAlt, w.altitude)
-      maxAlt = Math.max(maxAlt, w.altitude)
-    }
-    if (minAlt === maxAlt) maxAlt = minAlt + 1
-    if (minLat === maxLat) maxLat = minLat + 0.0001
-    if (minLng === maxLng) maxLng = minLng + 0.0001
-    return { minLat, maxLat, minLng, maxLng, minAlt, maxAlt }
-  }, [waypoints])
+export function MapView3D({ waypoints }: MapView3DProps) {
+  const [mounted, setMounted] = useState(false)
+  const viewerRef = useRef<Cesium.Viewer | null>(null)
+  const [trackedEntity, setTrackedEntity] = useState<Cesium.Entity | undefined>(undefined)
 
   useEffect(() => {
-    if (!containerRef.current) return
+    setMounted(true)
   }, [])
 
-  const project = (lat: number, lng: number, alt: number, width: number, height: number) => {
-    const nx = (lng - bounds.minLng) / (bounds.maxLng - bounds.minLng)
-    const ny = 1 - (lat - bounds.minLat) / (bounds.maxLat - bounds.minLat)
-    const nz = (alt - bounds.minAlt) / (bounds.maxAlt - bounds.minAlt)
-    const px = nx * width
-    const py = ny * height
-    const zScale = 120
-    const isoX = px + nz * 0.6 * zScale
-    const isoY = py - nz * 1.0 * zScale
-    return { x: isoX, y: isoY }
-  }
+  // Identify Drone Position (Action="current" or first point)
+  const droneWp = waypoints.find(w => w.action === "current")
+  const dronePosition = droneWp
+    ? Cesium.Cartesian3.fromDegrees(droneWp.lng, droneWp.lat, droneWp.altitude)
+    : (waypoints.length > 0 ? Cesium.Cartesian3.fromDegrees(waypoints[0].lng, waypoints[0].lat, waypoints[0].altitude) : undefined)
+
+  // Auto-track drone when found
+  useEffect(() => {
+    if (viewerRef.current && droneWp) {
+      // Give Cesium a moment to register the entity
+      const interval = setInterval(() => {
+        const entity = viewerRef.current?.entities.getById("drone-entity")
+        if (entity) {
+          setTrackedEntity(entity)
+          clearInterval(interval)
+        }
+      }, 100)
+
+      return () => clearInterval(interval)
+    }
+  }, [droneWp])
+
+  if (!mounted) return <div className="w-full h-full bg-black/90 flex items-center justify-center">Loading 3D Engine...</div>
+
+  // Calculate center... (rest of codes)
+  const center = waypoints.length > 0
+    ? Cesium.Cartesian3.fromDegrees(waypoints[0].lng, waypoints[0].lat, 500)
+    : Cesium.Cartesian3.fromDegrees(-122.4194, 37.7749, 1000)
+
+  // Convert waypoints... (rest of codes)
+  const flightPath = waypoints.filter(w => w.action !== 'current').map(w =>
+    Cesium.Cartesian3.fromDegrees(w.lng, w.lat, w.altitude)
+  )
 
   return (
-    <div ref={containerRef} className="relative w-full h-full rounded-lg overflow-hidden bg-gradient-to-b from-background to-muted">
-      <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="pathGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
-          </linearGradient>
-        </defs>
-        {waypoints.length > 1 && (
-          <polyline
-            points={waypoints
-              .map((w) => {
-                const r = containerRef.current?.getBoundingClientRect()
-                const width = r?.width || 800
-                const height = r?.height || 400
-                const p = project(w.lat, w.lng, w.altitude, width, height)
-                return `${p.x},${p.y}`
-              })
-              .join(" ")}
-            fill="none"
-            stroke="url(#pathGrad)"
-            strokeWidth="3"
-          />
+    <div className="w-full h-full relative rounded-lg overflow-hidden border border-white/10">
+      <Viewer
+        full
+        timeline={false}
+        animation={false}
+        navigationHelpButton={false}
+        homeButton={false}
+        geocoder={false}
+        baseLayerPicker={false}
+        sceneModePicker={false}
+        infoBox={false}
+        selectionIndicator={false}
+        className="w-full h-full"
+        ref={(e) => { if (e && e.cesiumElement) viewerRef.current = e.cesiumElement }}
+        trackedEntity={trackedEntity}
+      >
+        {/* Terrain and Init Camera... */}
+        {!trackedEntity && <CameraFlyTo destination={center} duration={2} />}
+
+        {/* Flight Path... */}
+        {flightPath.length > 1 && (
+          <Entity>
+            <PolylineGraphics
+              positions={flightPath}
+              width={3}
+              material={Cesium.Color.CYAN.withAlpha(0.7)}
+            />
+          </Entity>
         )}
-        {waypoints.map((w, i) => {
-          const r = containerRef.current?.getBoundingClientRect()
-          const width = r?.width || 800
-          const height = r?.height || 400
-          const p = project(w.lat, w.lng, w.altitude, width, height)
-          return (
-            <g key={w.id}>
-              <circle cx={p.x} cy={p.y} r={8} fill="hsl(var(--primary))" />
-              <text x={p.x + 10} y={p.y - 8} className="fill-foreground" fontSize={10}>
-                {i + 1}
-              </text>
-            </g>
-          )
-        })}
-      </svg>
-      <div className="absolute bottom-2 right-2 text-[10px] text-muted-foreground bg-card/80 px-2 py-1 rounded z-10">3D View</div>
+
+        {/* Waypoints... */}
+        {waypoints.filter(w => w.action !== 'current').map((w, i) => (
+          <Entity
+            key={w.id}
+            position={Cesium.Cartesian3.fromDegrees(w.lng, w.lat, w.altitude)}
+            name={`Waypoint ${i + 1}`}
+            description={`Action: ${w.action}`}
+          >
+            <PointGraphics pixelSize={10} color={Cesium.Color.YELLOW} outlineColor={Cesium.Color.BLACK} outlineWidth={2} />
+          </Entity>
+        ))}
+
+        {/* DRONE ENTITY */}
+        {droneWp && (
+          <Entity
+            id="drone-entity"
+            position={dronePosition}
+            name="Active Drone"
+          >
+            <PointGraphics pixelSize={15} color={Cesium.Color.CYAN} outlineColor={Cesium.Color.WHITE} outlineWidth={2} />
+            <ModelGraphics
+              uri="/drone.glb"
+              minimumPixelSize={64}
+              maximumScale={20000}
+            />
+          </Entity>
+        )}
+      </Viewer>
     </div>
   )
 }

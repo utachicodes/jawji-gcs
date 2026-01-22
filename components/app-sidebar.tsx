@@ -2,6 +2,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from 'next/navigation'
+import { useState, useEffect } from "react"
 
 import {
   Sidebar,
@@ -14,7 +15,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { useDroneStore } from "@/lib/drone-store"
-import { LayoutDashboard, Map, Gamepad2, CheckCircle2, FolderTree, Activity, ChartBar, Settings, Users } from "lucide-react"
+import { LayoutDashboard, Map, Gamepad2, CheckCircle2, FolderTree, Activity, ChartBar, Settings, Users, Command, Building2 } from "lucide-react"
 
 const navItems = [
   { title: "Flight Operations", url: "/dashboard", code: "FLT", icon: LayoutDashboard },
@@ -32,15 +33,54 @@ export function AppSidebar() {
   const pathname = usePathname()
   const { drones, selectedDrone } = useDroneStore()
   const activeDrone = drones.find((d) => d.id === selectedDrone)
+  const [mounted, setMounted] = useState(false)
+  const [user, setUser] = useState<{ name: string; email: string; org?: string } | null>(null)
+
+  // Use session if available, fallback to local storage
+  // Note: specific import needed for useSession if not already imported, 
+  // but we can reuse the logic from status-bar or just rely on local storage for now to avoid complexity if AuthWrapper isn't everywhere.
+  // Ideally, use a centralized store or context. For now, mirroring status-bar logic.
+
+  useEffect(() => {
+    setMounted(true)
+    // Simple user simulation/retrieval
+    const userData = typeof window !== "undefined" ? localStorage.getItem("jawji_user") : null
+    if (userData) {
+      setUser(JSON.parse(userData))
+    } else {
+      setUser({ name: "Abdoullah Al-Jerrari", email: "adboulah@jawji.com", org: "adboulah_5089" })
+    }
+  }, [])
+
+  if (!mounted) {
+    return (
+      <Sidebar collapsible="icon" className="border-r border-border bg-sidebar text-sidebar-foreground">
+        <SidebarHeader className="border-b border-sidebar-border p-4 flex items-center justify-center h-16">
+          {/* Static placeholder header */}
+        </SidebarHeader>
+        <SidebarContent />
+      </Sidebar>
+    )
+  }
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border/40 bg-[radial-gradient(50%_50%_at_50%_0%,_rgba(255,255,255,0.08),_transparent_70%)]">
-      <SidebarHeader className="border-b border-border/40 bg-card/60 backdrop-blur supports-[backdrop-filter]:bg-card/40" />
-      <SidebarContent className="bg-card/40">
-        <div className="px-3 pt-3 pb-2 text-sm tracking-[0.15em] text-muted-foreground font-mono group-data-[collapsible=icon]:hidden">
-          NAVIGATION
+    <Sidebar collapsible="icon" className="border-r border-border bg-sidebar text-sidebar-foreground">
+      <SidebarHeader className="border-b border-sidebar-border p-4 flex items-center justify-center h-16 transition-all">
+        <div className="flex items-center gap-2 w-full justify-center">
+          <div className="relative h-8 w-32 group-data-[collapsible=icon]:w-8 transition-all duration-300">
+            <Image
+              src="/jawji-logo.png"
+              alt="JAWJI"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
         </div>
-        <SidebarMenu className="gap-1 p-2">
+      </SidebarHeader>
+
+      <SidebarContent className="px-2 py-4 gap-2">
+        <SidebarMenu>
           {navItems.map((item) => {
             const Icon = item.icon
             const active = pathname === item.url
@@ -50,18 +90,22 @@ export function AppSidebar() {
                   asChild
                   isActive={active}
                   tooltip={item.title}
-                  className="h-11 group data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-accent hover:text-foreground rounded-lg transition-colors border border-transparent hover:border-border/40"
+                  className={`
+                    h-12 rounded-xl transition-all duration-200 group relative overflow-hidden
+                    ${active
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                    }
+                  `}
                 >
-                  <Link href={item.url}>
-                    <div className="flex items-center gap-3 w-full">
-                      <div className={`flex items-center justify-center h-7 w-7 rounded-md border ${active ? 'bg-primary-foreground/10 border-primary-foreground/20' : 'bg-muted/50 border-border/60'} transition-colors shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]` }>
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-                        <span className="text-sm font-medium">{item.title}</span>
-                        <span className={`${active ? 'bg-primary-foreground/10' : 'bg-muted/50'} font-mono text-[10px] px-1.5 py-0.5 rounded transition-colors border border-border/40`}>{item.code}</span>
-                      </div>
-                    </div>
+                  <Link href={item.url} className="flex items-center gap-4 px-3">
+                    {active && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-full bg-primary" />
+                    )}
+                    <Icon className={`w-5 h-5 ${active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"}`} />
+                    <span className="font-medium tracking-wide text-sm group-data-[collapsible=icon]:hidden">
+                      {item.title}
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -69,36 +113,47 @@ export function AppSidebar() {
           })}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter className="border-t border-border/40 bg-card/60 backdrop-blur supports-[backdrop-filter]:bg-card/40">
-        <div className="px-3 py-3 space-y-2 font-mono text-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground group-data-[collapsible=icon]:hidden">LINK</span>
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-green-500 font-semibold group-data-[collapsible=icon]:hidden">ACTIVE</span>
+
+      <SidebarFooter className="border-t border-sidebar-border p-0 bg-sidebar-muted/20">
+
+        {/* Organization Section (Inspired by CAYTU) */}
+        <div className="p-4 group-data-[collapsible=icon]:p-2 transition-all">
+          <Link href="/profile">
+            <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center cursor-pointer group">
+              <div className="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-lg group-hover:bg-blue-700 transition-colors">
+                <Building2 className="w-5 h-5" />
+              </div>
+
+              <div className="flex flex-col overflow-hidden group-data-[collapsible=icon]:hidden transition-all duration-300 ease-in-out">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider group-hover:text-primary transition-colors">Organization</span>
+                <span className="text-sm font-bold text-sidebar-foreground truncate group-hover:underline decoration-primary underline-offset-4">{user?.org || "Current Org."}</span>
+                <span className="text-xs text-muted-foreground truncate">{user?.name || "User"}</span>
+              </div>
+            </div>
+          </Link>
+        </div>
+
+        {/* System Status (Visible only when expanded for clarity, or small dot when collapsed) */}
+        {activeDrone && (
+          <div className="px-4 pb-4 group-data-[collapsible=icon]:hidden">
+            <div className="bg-card/50 rounded-lg p-3 border border-border space-y-2">
+              <div className="flex items-center justify-between text-[10px] uppercase font-bold text-muted-foreground">
+                <span>System Status</span>
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-background/80 rounded p-1 text-center border border-border">
+                  <span className="text-[10px] text-muted-foreground block">BAT</span>
+                  <span className={`text-xs font-mono font-bold ${activeDrone.battery < 20 ? 'text-red-500' : 'text-green-500'}`}>{activeDrone.battery}%</span>
+                </div>
+                <div className="bg-background/80 rounded p-1 text-center border border-border">
+                  <span className="text-[10px] text-muted-foreground block">SIG</span>
+                  <span className="text-xs font-mono font-bold text-blue-500">{activeDrone.signal}%</span>
+                </div>
+              </div>
             </div>
           </div>
-          {activeDrone && (
-            <>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground group-data-[collapsible=icon]:hidden">PWR</span>
-                <div className="flex-1 mx-2 h-1.5 rounded bg-muted/60 overflow-hidden group-data-[collapsible=icon]:hidden">
-                  <div className="h-full bg-green-500" style={{ width: `${Math.max(0, Math.min(100, activeDrone.battery))}%` }} />
-                </div>
-                <span className="text-foreground font-semibold group-data-[collapsible=icon]:hidden min-w-[2.5rem] text-right">{activeDrone.battery}%</span>
-                <div className="hidden group-data-[collapsible=icon]:block h-1.5 w-1.5 rounded-full bg-green-500" />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground group-data-[collapsible=icon]:hidden">SIG</span>
-                <div className="flex-1 mx-2 h-1.5 rounded bg-muted/60 overflow-hidden group-data-[collapsible=icon]:hidden">
-                  <div className="h-full bg-green-500" style={{ width: `${Math.max(0, Math.min(100, activeDrone.signal))}%` }} />
-                </div>
-                <span className="text-foreground font-semibold group-data-[collapsible=icon]:hidden min-w-[2.5rem] text-right">{activeDrone.signal}%</span>
-                <div className="hidden group-data-[collapsible=icon]:block h-1.5 w-1.5 rounded-full bg-green-500" />
-              </div>
-            </>
-          )}
-        </div>
+        )}
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

@@ -12,6 +12,7 @@ import { Toaster } from "sonner"
 import { TelemetryBootstrap } from "@/components/telemetry-bootstrap"
 import { PwaBootstrap } from "@/components/pwa-bootstrap"
 import { AuthSessionProvider } from "@/components/auth-session-provider"
+import { CookieConsent } from "@/components/cookie-consent"
 
 export const metadata: Metadata = {
   title: "JAWJI Ground Control Station",
@@ -36,10 +37,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className="dark">
-      <body className={`min-h-screen bg-background text-foreground antialiased font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`h-[100dvh] w-screen overflow-hidden bg-background text-foreground antialiased font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <AuthSessionProvider>
-          <ThemeProvider defaultTheme="dark" storageKey="jawji-theme">
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange storageKey="jawji-theme">
             <Suspense fallback={null}>
               {children}
               <Analytics />
@@ -47,9 +48,10 @@ export default function RootLayout({
             </Suspense>
             <TelemetryBootstrap />
             <PwaBootstrap />
+            <CookieConsent />
           </ThemeProvider>
         </AuthSessionProvider>
-     </body>
+      </body>
     </html>
   )
 }

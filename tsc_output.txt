@@ -1,0 +1,4 @@
+components/mission-planning.tsx(130,26): error TS1127: Invalid character.
+components/mission-planning.tsx(130,27): error TS1134: Variable declaration expected.
+components/mission-planning.tsx(463,1): error TS1005: '}' expected.
+components/mission-planning.tsx(463,1): error TS1160: Unterminated template literal.
