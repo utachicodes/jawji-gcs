@@ -1,12 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import L from "leaflet"
+import type React from "react"
 
-// Fix for Leaflet marker icons in Next.js
-const iconUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png"
-const iconRetinaUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png"
-const shadowUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png"
+import { useEffect, useRef, useState } from "react"
 
 interface Waypoint {
   id: string
@@ -27,238 +23,306 @@ interface MapViewProps {
   heading?: number
 }
 
-const DEFAULT_CENTER: [number, number] = [37.7749, -122.4194]
-
 export function MapView({
   waypoints,
   selectedWaypoint,
   onWaypointClick,
   onMapClick,
-  center = DEFAULT_CENTER,
-  zoom = 18, // Satellite needs closer zoom usually
-  heading = 0,
+  center = [37.7749, -122.4194],
+  zoom = 13,
+  heading,
 }: MapViewProps) {
-  const mapContainerRef = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<L.Map | null>(null)
-  const markersRef = useRef<{ [key: string]: L.Marker }>({})
-  const polylineRef = useRef<L.Polyline | null>(null)
-  const droneMarkerRef = useRef<L.Marker | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [mapSize, setMapSize] = useState({ width: 0, height: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const [mapCenter, setMapCenter] = useState(center)
+  const [mapZoom, setMapZoom] = useState(zoom)
 
-  // Initialize Map
   useEffect(() => {
-    if (!mapContainerRef.current || mapInstanceRef.current) return
-
-    // Create Map
-    const map = L.map(mapContainerRef.current, {
-      center: center,
-      zoom: zoom,
-      attributionControl: false, // User requested removal
-      zoomControl: false, // We'll add custom or rely on scroll
-    })
-
-    // Custom Zoom Control at bottom-right (moved from top-right to avoid overlap)
-    L.control.zoom({ position: 'bottomright' }).addTo(map)
-
-    // Add Esri World Imagery (Satellite)
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 19,
-      attribution: 'Esri'
-    }).addTo(map)
-
-    // Map Click Handler
-    map.on('click', (e) => {
-      if (onMapClick) {
-        onMapClick(e.latlng.lat, e.latlng.lng)
+    if (containerRef.current) {
+      const updateSize = () => {
+        setMapSize({
+          width: containerRef.current?.clientWidth || 0,
+          height: containerRef.current?.clientHeight || 0,
+        })
       }
-    })
-
-    mapInstanceRef.current = map
-
-    return () => {
-      map.remove()
-      mapInstanceRef.current = null
-    }
-  }, []) // Init once
-
-  // Update Center/Zoom
-  useEffect(() => {
-    if (!mapInstanceRef.current || !center) return
-    // Use flyTo for smooth transition if distance isn't too huge, otherwise setView
-    mapInstanceRef.current.setView(center, zoom)
-  }, [center, zoom])
-
-  // Update Waypoints & Path
-  useEffect(() => {
-    if (!mapInstanceRef.current) return
-    const map = mapInstanceRef.current
-
-    // 1. Clear old markers/polyline
-    Object.values(markersRef.current).forEach(m => m.remove())
-    markersRef.current = {}
-    if (polylineRef.current) polylineRef.current.remove()
-    if (droneMarkerRef.current) droneMarkerRef.current.remove()
-
-    // 2. Draw Polyline
-    if (waypoints.length > 1) {
-      const latlngs = waypoints.map(wp => [wp.lat, wp.lng] as [number, number])
-      polylineRef.current = L.polyline(latlngs, {
-        color: 'hsl(var(--primary))', // Cyan/Primary
-        weight: 3,
-        dashArray: '10, 10',
-        opacity: 0.8
-      }).addTo(map)
-    }
-
-    // 3. Draw Markers
-    waypoints.forEach((wp, index) => {
-      const isSelected = selectedWaypoint === wp.id
-
-      // Custom Icon
-      const icon = L.divIcon({
-        className: 'bg-transparent border-none',
-        html: `
-                <div class="relative flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2">
-                    <div class="flex items-center justify-center rounded-full font-bold text-sm transition-all shadow-md ${isSelected
-            ? "w-10 h-10 bg-primary text-primary-foreground ring-4 ring-primary/30 z-[1000]"
-            : "w-8 h-8 bg-primary/80 text-primary-foreground"
-          }">
-                        ${index + 1}
-                    </div>
-                </div>
-            `,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20]
-      })
-
-      const marker = L.marker([wp.lat, wp.lng], { icon }).addTo(map)
-
-      marker.on('click', (e) => {
-        L.DomEvent.stopPropagation(e)
-        onWaypointClick(wp.id)
-      })
-
-      markersRef.current[wp.id] = marker
-    })
-
-  }, [waypoints, selectedWaypoint, onWaypointClick])
-
-
-  // Update Drone Marker (Heading/Position)
-  // We assume the "current" drone position might be passed as a special waypoint or separate prop.
-  // In the previous component, it looked for `waypoint.action === "current"`.
-  // Let's replicate that logic inside the waypoints loop or separate it if possible.
-  // Wait, looking at previous code: 
-  /*
-     {waypoint.action === "current" ? ( ... DRONE UI ... ) : ( ... NUMBER UI ... )}
-  */
-  // So the drone IS one of the waypoints with action "current".
-  // My loop above just draws numbers. I need to handle action="current" differently.
-
-  useEffect(() => {
-    if (!mapInstanceRef.current) return
-    const map = mapInstanceRef.current
-
-    // Find drone waypoint if any
-    const droneWp = waypoints.find(w => w.action === "current")
-
-    if (droneWp) {
-      // Remove generic marker for it if it was added (it was added in the loop above, which is inefficient but simple)
-      // Let's refine the loop above to SKIP 'current' and handle it here, or handle it inside the loop.
-      // Handling inside the loop is better for React deps.
-    }
-  }, [waypoints, heading])
-
-
-  // Re-run the marker loop to include Drone Logic properly
-  useEffect(() => {
-    if (!mapInstanceRef.current) return
-    const map = mapInstanceRef.current
-
-    // Clear everything first
-    Object.values(markersRef.current).forEach(m => m.remove())
-    markersRef.current = {}
-    if (polylineRef.current) polylineRef.current.remove()
-
-    // Draw Polyline (excluding 'current' if it's strictly the drone, but usually waypoints are the path)
-    // Assuming 'current' IS the drone and shouldn't be part of the path line? 
-    // Usually GCS shows path + drone.
-    const pathWaypoints = waypoints.filter(w => w.action !== 'current')
-    if (pathWaypoints.length > 1) {
-      const latlngs = pathWaypoints.map(wp => [wp.lat, wp.lng] as [number, number])
-      polylineRef.current = L.polyline(latlngs, {
-        color: '#06b6d4', // Cyan
-        weight: 3,
-        dashArray: '10, 10',
-        opacity: 0.8
-      }).addTo(map)
-    }
-
-    // Draw Waypoints
-    waypoints.forEach((wp, index) => {
-      const isSelected = selectedWaypoint === wp.id
-      const isDrone = wp.action === "current"
-
-      let html = ''
-      let zIndexOffset = 0
-
-      if (isDrone) {
-        zIndexOffset = 1000
-        html = `
-              <div class="relative flex items-center justify-center">
-                  <span class="absolute inset-0 -m-2 rounded-full bg-cyan-500/30 blur-md animate-ping"></span>
-                  <!-- Heading Arrow -->
-                  <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" style="transform: translate(-50%, -50%) rotate(${heading}deg);">
-                     <div class="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[12px] border-l-transparent border-r-transparent border-b-cyan-500 filter drop-shadow-lg"></div>
-                  </div>
-                  <!-- Halo -->
-                  <div class="w-10 h-10 rounded-full border-2 border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.5)]"></div>
-              </div>
-            `
-      } else {
-        // Numbered Waypoint
-        // Adjust index to match visual list (1-based, excluding drone if needed, but simple index is fine)
-        // Use waypoints index or path index? Let's use generic index for now.
-        html = `
-                <div class="relative flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2">
-                    <div class="flex items-center justify-center rounded-full font-bold text-sm transition-all shadow-md ${isSelected
-            ? "w-8 h-8 bg-cyan-600 text-white ring-2 ring-white scale-110"
-            : "w-6 h-6 bg-cyan-800/90 text-white border border-white/20"
-          }">
-                        ${index + 1}
-                    </div>
-                </div>
-            `
+      updateSize()
+      window.addEventListener("resize", updateSize)
+      const ro = new ResizeObserver(() => updateSize())
+      ro.observe(containerRef.current)
+      return () => {
+        window.removeEventListener("resize", updateSize)
+        try { ro.disconnect() } catch {}
       }
+    }
+  }, [])
 
-      const icon = L.divIcon({
-        className: 'bg-transparent border-none',
-        html: html,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20]
-      })
+  useEffect(() => {
+    if (!center) return
+    setMapCenter(center)
+  }, [center])
 
-      const marker = L.marker([wp.lat, wp.lng], {
-        icon,
-        zIndexOffset
-      }).addTo(map)
+  // Convert lat/lng to pixel coordinates
+  const latLngToPixel = (lat: number, lng: number) => {
+    const scale = Math.pow(2, mapZoom)
+    const worldWidth = 256 * scale
+    const worldHeight = 256 * scale
 
-      marker.on('click', (e) => {
-        L.DomEvent.stopPropagation(e)
-        onWaypointClick(wp.id)
-      })
+    const x = ((lng + 180) / 360) * worldWidth
+    const latRad = (lat * Math.PI) / 180
+    const mercN = Math.log(Math.tan(Math.PI / 4 + latRad / 2))
+    const y = worldHeight / 2 - (worldWidth * mercN) / (2 * Math.PI)
 
-      markersRef.current[wp.id] = marker
-    })
+    const centerX = ((mapCenter[1] + 180) / 360) * worldWidth
+    const centerLatRad = (mapCenter[0] * Math.PI) / 180
+    const centerMercN = Math.log(Math.tan(Math.PI / 4 + centerLatRad / 2))
+    const centerY = worldHeight / 2 - (worldWidth * centerMercN) / (2 * Math.PI)
 
-  }, [waypoints, selectedWaypoint, onWaypointClick, heading])
+    return {
+      x: x - centerX + mapSize.width / 2,
+      y: y - centerY + mapSize.height / 2,
+    }
+  }
+
+  // Convert pixel coordinates to lat/lng
+  const pixelToLatLng = (x: number, y: number) => {
+    const scale = Math.pow(2, mapZoom)
+    const worldWidth = 256 * scale
+    const worldHeight = 256 * scale
+
+    const centerX = ((mapCenter[1] + 180) / 360) * worldWidth
+    const centerLatRad = (mapCenter[0] * Math.PI) / 180
+    const centerMercN = Math.log(Math.tan(Math.PI / 4 + centerLatRad / 2))
+    const centerY = worldHeight / 2 - (worldWidth * centerMercN) / (2 * Math.PI)
+
+    const worldX = x - mapSize.width / 2 + centerX
+    const worldY = y - mapSize.height / 2 + centerY
+
+    const lng = (worldX / worldWidth) * 360 - 180
+    const mercN = (worldHeight / 2 - worldY) * ((2 * Math.PI) / worldWidth)
+    const latRad = 2 * Math.atan(Math.exp(mercN)) - Math.PI / 2
+    const lat = (latRad * 180) / Math.PI
+
+    return { lat, lng }
+  }
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true)
+    setDragStart({ x: e.clientX, y: e.clientY })
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return
+
+    const dx = e.clientX - dragStart.x
+    const dy = e.clientY - dragStart.y
+
+    const scale = Math.pow(2, mapZoom)
+    const worldWidth = 256 * scale
+
+    const dLng = -(dx / worldWidth) * 360
+    const dLat = (dy / worldWidth) * 360 * 0.5
+
+    setMapCenter([mapCenter[0] + dLat, mapCenter[1] + dLng])
+    setDragStart({ x: e.clientX, y: e.clientY })
+  }
+
+  const handleMouseUp = () => {
+    setIsDragging(false)
+  }
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isDragging) return
+
+    const rect = containerRef.current?.getBoundingClientRect()
+    if (!rect) return
+
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    // Check if clicked on a waypoint
+    let clickedWaypoint = false
+    for (const waypoint of waypoints) {
+      const pos = latLngToPixel(waypoint.lat, waypoint.lng)
+      const distance = Math.sqrt(Math.pow(pos.x - x, 2) + Math.pow(pos.y - y, 2))
+      if (distance < 20) {
+        onWaypointClick(waypoint.id)
+        clickedWaypoint = true
+        break
+      }
+    }
+
+    // If no waypoint clicked, add new waypoint
+    if (!clickedWaypoint && onMapClick) {
+      const { lat, lng } = pixelToLatLng(x, y)
+      onMapClick(lat, lng)
+    }
+  }
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault()
+    const delta = e.deltaY > 0 ? -1 : 1
+    setMapZoom(Math.max(3, Math.min(18, mapZoom + delta)))
+  }
+
+  // Calculate tile coordinates for the current view
+  const getTileUrl = (x: number, y: number, z: number) => {
+    return `https://tile.openstreetmap.org/${z}/${x}/${y}.png`
+  }
+
+  const tileSize = 256
+  const scale = Math.pow(2, mapZoom)
+  const centerTileX = Math.floor(((mapCenter[1] + 180) / 360) * scale)
+  const centerTileY = Math.floor(
+    ((1 - Math.log(Math.tan((mapCenter[0] * Math.PI) / 180) + 1 / Math.cos((mapCenter[0] * Math.PI) / 180)) / Math.PI) /
+      2) *
+      scale,
+  )
+
+  const tilesX = Math.ceil(mapSize.width / tileSize) + 2
+  const tilesY = Math.ceil(mapSize.height / tileSize) + 2
 
   return (
-    <div className="w-full h-full relative rounded-lg overflow-hidden bg-muted">
-      <div ref={mapContainerRef} className="absolute inset-0 z-0" />
+    <div
+      ref={containerRef}
+      className="relative w-full h-full overflow-hidden bg-muted rounded-lg cursor-grab active:cursor-grabbing"
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onClick={handleClick}
+      onWheel={handleWheel}
+    >
+      {/* Map tiles */}
+      <div className="absolute inset-0">
+        {Array.from({ length: tilesY }).map((_, ty) =>
+          Array.from({ length: tilesX }).map((_, tx) => {
+            const tileX = centerTileX + tx - Math.floor(tilesX / 2)
+            const tileY = centerTileY + ty - Math.floor(tilesY / 2)
 
-      {/* Attribution Hiding is done in global CSS, but we also disabled it in Leaflet config above */}
+            const centerPixel = latLngToPixel(mapCenter[0], mapCenter[1])
+            const left = mapSize.width / 2 - centerPixel.x + tileX * tileSize
+            const top = mapSize.height / 2 - centerPixel.y + tileY * tileSize
 
+            return (
+              <img
+                key={`${tileX}-${tileY}`}
+                src={getTileUrl(tileX, tileY, mapZoom) || "/placeholder.svg"}
+                alt=""
+                className="absolute pointer-events-none"
+                style={{
+                  left: `${left}px`,
+                  top: `${top}px`,
+                  width: `${tileSize}px`,
+                  height: `${tileSize}px`,
+                }}
+                loading="lazy"
+                decoding="async"
+              />
+            )
+          }),
+        )}
+      </div>
 
+      {/* Waypoint path */}
+      {waypoints.length > 1 && (
+        <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
+          <polyline
+            points={waypoints
+              .map((wp) => {
+                const pos = latLngToPixel(wp.lat, wp.lng)
+                return `${pos.x},${pos.y}`
+              })
+              .join(" ")}
+            fill="none"
+            stroke="hsl(var(--primary))"
+            strokeWidth="3"
+            strokeDasharray="10,10"
+            opacity="0.7"
+          />
+        </svg>
+      )}
+
+      {/* Waypoint markers */}
+      {waypoints.map((waypoint, index) => {
+        const pos = latLngToPixel(waypoint.lat, waypoint.lng)
+        const isSelected = selectedWaypoint === waypoint.id
+
+        return (
+          <div
+            key={waypoint.id}
+            className="absolute pointer-events-none"
+            style={{
+              left: `${pos.x}px`,
+              top: `${pos.y}px`,
+              transform: "translate(-50%, -50%)",
+              zIndex: isSelected ? 3 : 2,
+            }}
+          >
+            {waypoint.action === "current" ? (
+              <div className="relative">
+                <span className="absolute inset-0 -m-2 rounded-full bg-primary/30 blur-md animate-ping" />
+                {/* Heading arrow */}
+                <div
+                  className="absolute left-1/2 -translate-x-1/2 -top-5"
+                  style={{ transform: `translateX(-50%) rotate(${(heading ?? 0)}deg)` }}
+                >
+                  <div className="w-0 h-0 border-l-4 border-r-4 border-b-8 border-l-transparent border-r-transparent border-b-primary drop-shadow" />
+                </div>
+                <div
+                  className={`flex items-center justify-center rounded-full font-bold text-sm transition-all ${
+                    isSelected
+                      ? "w-10 h-10 bg-primary text-primary-foreground ring-4 ring-primary/30"
+                      : "w-9 h-9 bg-primary text-primary-foreground"
+                  }`}
+                  style={{ boxShadow: "0 4px 12px rgba(0,0,0,0.35)" }}
+                >
+                  DRN
+                </div>
+              </div>
+            ) : (
+              <div
+                className={`flex items-center justify-center rounded-full font-bold text-sm transition-all ${
+                  isSelected
+                    ? "w-10 h-10 bg-primary text-primary-foreground ring-4 ring-primary/30"
+                    : "w-8 h-8 bg-primary/80 text-primary-foreground"
+                }`}
+                style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}
+              >
+                {index + 1}
+              </div>
+            )}
+          </div>
+        )
+      })}
+
+      {/* Map controls */}
+      <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+        <button
+          className="w-8 h-8 bg-card border border-border rounded flex items-center justify-center hover:bg-accent transition-colors"
+          onClick={(e) => {
+            e.stopPropagation()
+            setMapZoom(Math.min(18, mapZoom + 1))
+          }}
+        >
+          +
+        </button>
+        <button
+          className="w-8 h-8 bg-card border border-border rounded flex items-center justify-center hover:bg-accent transition-colors"
+          onClick={(e) => {
+            e.stopPropagation()
+            setMapZoom(Math.max(3, mapZoom - 1))
+          }}
+        >
+          −
+        </button>
+      </div>
+
+      {/* Attribution */}
+      <div className="absolute bottom-2 right-2 text-[10px] text-muted-foreground bg-card/80 px-2 py-1 rounded z-10">
+        © OpenStreetMap
+      </div>
     </div>
   )
 }

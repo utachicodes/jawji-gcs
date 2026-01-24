@@ -1,75 +1,84 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState } from "react"
 
 interface JoystickProps {
   onMove?: (x: number, y: number) => void
-  size?: number
 }
 
-// <CHANGE> Added size prop support
-export function VirtualJoystick({ onMove, size = 160 }: JoystickProps) {
+// <CHANGE> Removed label prop and made component simpler
+export function VirtualJoystick({ onMove }: JoystickProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
 
-  const handleEnd = () => {
-    setIsDragging(false)
-    setPosition({ x: 0, y: 0 })
-    onMove?.(0, 0)
-  }
+  useEffect(() => {
+    const handleMove = (clientX: number, clientY: number) => {
+      if (!containerRef.current || !isDragging) return
 
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    setIsDragging(true)
-    e.currentTarget.setPointerCapture(e.pointerId)
-    handlePointerMove(e)
-  }
+      const rect = containerRef.current.getBoundingClientRect()
+      const centerX = rect.width / 2
+      const centerY = rect.height / 2
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDragging && e.type !== 'pointerdown') return
-    if (!containerRef.current) return
+      let x = clientX - rect.left - centerX
+      let y = clientY - rect.top - centerY
 
-    const rect = containerRef.current.getBoundingClientRect()
-    const centerX = rect.width / 2
-    const centerY = rect.height / 2
+      const distance = Math.sqrt(x * x + y * y)
+      const maxDistance = centerX - 20
 
-    // ClientX/Y relative to the container center
-    let x = e.clientX - rect.left - centerX
-    let y = e.clientY - rect.top - centerY
+      if (distance > maxDistance) {
+        const angle = Math.atan2(y, x)
+        x = Math.cos(angle) * maxDistance
+        y = Math.sin(angle) * maxDistance
+      }
 
-    const distance = Math.sqrt(x * x + y * y)
-    const maxDistance = centerX - 20
-
-    // Clamp the dot within the circle
-    if (distance > maxDistance) {
-      const angle = Math.atan2(y, x)
-      x = Math.cos(angle) * maxDistance
-      y = Math.sin(angle) * maxDistance
+      setPosition({ x, y })
+      onMove?.(x / maxDistance, y / maxDistance)
     }
 
-    setPosition({ x, y })
-    // Normalize output -1 to 1
-    onMove?.(x / maxDistance, y / maxDistance)
-  }
+    const handleMouseMove = (e: MouseEvent) => {
+      handleMove(e.clientX, e.clientY)
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        handleMove(e.touches[0].clientX, e.touches[0].clientY)
+      }
+    }
+
+    const handleEnd = () => {
+      setIsDragging(false)
+      setPosition({ x: 0, y: 0 })
+      onMove?.(0, 0)
+    }
+
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove)
+      window.addEventListener("touchmove", handleTouchMove)
+      window.addEventListener("mouseup", handleEnd)
+      window.addEventListener("touchend", handleEnd)
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove)
+      window.removeEventListener("touchmove", handleTouchMove)
+      window.removeEventListener("mouseup", handleEnd)
+      window.removeEventListener("touchend", handleEnd)
+    }
+  }, [isDragging, onMove])
 
   return (
     <div
       ref={containerRef}
-      className="relative rounded-full bg-muted border-2 border-border cursor-pointer touch-none select-none"
-      style={{ width: size, height: size }}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handleEnd}
-      onPointerCancel={handleEnd}
-      onPointerLeave={handleEnd}
+      className="relative w-40 h-40 rounded-full bg-muted border-2 border-border cursor-pointer touch-none"
+      onMouseDown={() => setIsDragging(true)}
+      onTouchStart={() => setIsDragging(true)}
     >
-      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-muted/50 to-muted pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-1 bg-border rounded-full pointer-events-none" />
+      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-muted/50 to-muted" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-1 bg-border rounded-full" />
       <div
-        className="absolute top-1/2 left-1/2 rounded-full bg-primary shadow-lg transition-transform pointer-events-none"
+        className="absolute top-1/2 left-1/2 w-12 h-12 rounded-full bg-primary shadow-lg transition-transform"
         style={{
-          width: size * 0.3,
-          height: size * 0.3,
           transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
         }}
       />

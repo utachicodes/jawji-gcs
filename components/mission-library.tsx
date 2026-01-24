@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useEffect } from "react"
+import { useRef, useState } from "react"
 import Link from "next/link"
 import {
   Plus,
@@ -29,8 +29,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useMissionStore } from "@/lib/mission-store"
 import type { Mission as StoreMission } from "@/lib/mission-store"
-import { useFirebaseAuth } from "@/lib/auth-service"
-import { getUserProfile } from "@/lib/firestore-service"
 import { toast } from "sonner"
 import { z } from "zod"
 
@@ -40,18 +38,10 @@ export function MissionLibrary() {
   const [searchQuery, setSearchQuery] = useState("")
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards")
-
-  const { user } = useFirebaseAuth()
-  const { missions, addMission, removeMission, importMissions, fetchMissions } = useMissionStore()
-
-  useEffect(() => {
-    async function load() {
-      if (!user) return
-      const p = await getUserProfile(user.uid)
-      if (p?.orgId) fetchMissions(p.orgId)
-    }
-    load()
-  }, [user, fetchMissions])
+  const missions = useMissionStore((s) => s.missions)
+  const addMission = useMissionStore((s) => s.addMission)
+  const removeMission = useMissionStore((s) => s.removeMission)
+  const importMissions = useMissionStore((s) => s.importMissions)
 
   const filteredMissions = missions.filter(
     (mission) =>
@@ -78,30 +68,8 @@ export function MissionLibrary() {
       riskAssessment: mission.riskAssessment,
       checklist: mission.checklist,
       waypointData: mission.waypointData,
-    }, user)
+    })
     toast.success("Mission duplicated")
-  }
-
-  const loadExampleMission = () => {
-    addMission({
-      name: "Delivery with Kiosks",
-      description: "Standard delivery route including 3 kiosk drops in Sector 4.",
-      waypoints: 5,
-      distance: 3.2,
-      duration: 15,
-      status: "ready",
-      altitude: 60,
-      cruiseSpeed: 10,
-      checklist: ["Battery > 90%", "Payload Secured", "Clearance Received"],
-      waypointData: [
-        { id: "1", lat: 0, lng: 0, altitude: 60, action: "Takeoff" },
-        { id: "2", lat: 0.001, lng: 0.001, altitude: 60, action: "Waypoint" },
-        { id: "3", lat: 0.002, lng: 0.001, altitude: 40, action: "Kiosk Drop" },
-        { id: "4", lat: 0.003, lng: 0.0, altitude: 60, action: "Waypoint" },
-        { id: "5", lat: 0, lng: 0, altitude: 0, action: "Land" },
-      ]
-    }, user)
-    toast.success("Example mission loaded")
   }
 
   const getStatusColor = (status: Mission["status"]) => {
@@ -179,15 +147,15 @@ export function MissionLibrary() {
               checklist: m.checklist ?? [],
               waypointData: Array.isArray(m.waypointData)
                 ? m.waypointData.map((w: any, idx: number) => ({
-                  ...w,
-                  id: String(w.id ?? idx + 1),
-                }))
+                    ...w,
+                    id: String(w.id ?? idx + 1),
+                  }))
                 : undefined,
             }))
           )
         }
         if (errors > 0) toast.error(`${errors} mission(s) failed validation`)
-        if (valids.length > 0) toast.success(`Imported ${valids.length} mission(s)`)
+        if (valids.length > 0) toast.success(`Imported ${valids.length} mission(s)`)        
       } else if (data && typeof data === "object") {
         const parsed = MissionSchema.safeParse(data)
         if (!parsed.success) {
@@ -211,11 +179,11 @@ export function MissionLibrary() {
             checklist: m.checklist ?? [],
             waypointData: Array.isArray(m.waypointData)
               ? m.waypointData.map((w: any, idx: number) => ({
-                ...w,
-                id: String(w.id ?? idx + 1),
-              }))
+                  ...w,
+                  id: String(w.id ?? idx + 1),
+                }))
               : undefined,
-          }, user)
+          })
           toast.success("Imported mission")
         }
       }
@@ -434,11 +402,8 @@ export function MissionLibrary() {
       )}
 
       {filteredMissions.length === 0 && (
-        <div className="text-center py-12 space-y-4">
-          <p className="text-muted-foreground">No missions found. Create a new one or load an example.</p>
-          <Button variant="outline" onClick={loadExampleMission}>
-            Load "Delivery with Kiosks" Example
-          </Button>
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No missions found matching your search</p>
         </div>
       )}
     </div>

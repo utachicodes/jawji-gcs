@@ -1,0 +1,26 @@
+# Global MQTT configuration
+mqtt:
+  endpoint: "a3bwhvqtm75asn-ats.iot.us-east-1.amazonaws.com"
+  port: 8883
+
+# Streaming configuration
+#"https://jawji-ai.vercel.app/api/ingest"
+#"http://localhost:5000/api/ingest"
+stream:
+  parameters:
+    endpoint: "https://jawji-ai.vercel.app/api/ingest"
+    method: "POST"
+    headers:
+      x-api-token: "api.4581efbd-8143-4fbc-973c-61145ae88c93"
+    streaming:
+      enabled: true
+      rate: 2000 # milliseconds
+
+# Device configurations
+devices:
+  - device_id: "690c7b29535c79e79fbb23fc"
+    stack_name: "JAWJI-DRONE"
+    thing_name: "JAWJI-DRONE-CaytuThing-YbWhZZR51VoU"
+    topics:
+      mode: "data_all"      
+      list: []     

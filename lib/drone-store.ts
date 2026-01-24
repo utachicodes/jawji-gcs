@@ -1,6 +1,5 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import { getDrones, DroneData } from "./firestore-service"
 
 export interface DroneLocation {
   lat: number
@@ -8,8 +7,11 @@ export interface DroneLocation {
   altitude: number
 }
 
-// Extends Firestore DroneData with runtime properties
-export interface Drone extends DroneData {
+export interface Drone {
+  id: string
+  name: string
+  model: string
+  status: "online" | "offline" | "flying" | "error"
   mode: string
   battery: number
   signal: number
@@ -23,21 +25,17 @@ export interface Drone extends DroneData {
   flightTime?: number
   videoUrl?: string
   extras?: Record<string, unknown>
-  gpsCount?: number
+  lastSeen: string
 }
 
-type CreateDronePayload = Omit<Drone, "id" | "lastSeen" | "orgId"> & { id?: string }
+type CreateDronePayload = Omit<Drone, "id" | "lastSeen"> & { id?: string }
 
 interface DroneStore {
   drones: Drone[]
   selectedDrone: string | null
-  isLoading: boolean
-
-  // Actions
-  fetchDrones: (orgId: string) => Promise<void>
-  addDrone: (drone: Drone, user: any) => Promise<void>
-  removeDrone: (id: string) => Promise<void>
-  updateDrone: (id: string, updates: Partial<Drone>) => Promise<void>
+  addDrone: (drone: CreateDronePayload) => void
+  removeDrone: (id: string) => void
+  updateDrone: (id: string, updates: Partial<Drone>) => void
   selectDrone: (id: string) => void
 }
 
@@ -48,106 +46,69 @@ export const useDroneStore = create<DroneStore>()(
     (set, get) => ({
       drones: [],
       selectedDrone: null,
-      isLoading: false,
-
-      fetchDrones: async (orgId: string) => {
-        set({ isLoading: true })
-        try {
-          const remoteDrones = await getDrones(orgId)
-
-          // Merge remote drones with existing runtime state
-          const existing = get().drones
-          const merged = remoteDrones.map(rd => {
-            const match = existing.find(e => e.id === rd.id)
-            if (match) {
-              return { ...match, ...rd }
-            }
-            return {
-              ...rd,
-              mode: 'Standby',
-              battery: 100,
-              signal: 100,
-              lastSeen: rd.lastSeen
-            } as Drone
-          })
-
-          set({ drones: merged, isLoading: false })
-        } catch (e) {
-          console.error("Failed to sync drones", e)
-          set({ isLoading: false })
-        }
-      },
-
-      addDrone: async (drone, user) => {
-        // Optimistic update
-        const tempId = drone.id || `temp_${Date.now()}`
-        set(state => ({ drones: [...state.drones, { ...drone, id: tempId }] }))
-
-        try {
-          // Persist
-          const { addDrone: fsAddDrone } = await import("./firestore-service")
-          const newDrone = await fsAddDrone({
-            name: drone.name,
-            model: drone.model,
-            status: drone.status,
-            lastSeen: Date.now()
-          }, user)
-
-          // Reconcile ID
-          set(state => ({
-            drones: state.drones.map(d => d.id === tempId ? { ...d, id: newDrone.id, orgId: newDrone.orgId } : d)
-          }))
-        } catch (e) {
-          console.error(e)
-          // Rollback
-          set(state => ({ drones: state.drones.filter(d => d.id !== tempId) }))
-        }
-      },
-
-      removeDrone: async (id) => {
-        const { deleteDrone } = await import("./firestore-service")
-        set(state => ({ drones: state.drones.filter(d => d.id !== id) }))
-        try {
-          await deleteDrone(id)
-        } catch (e) {
-          console.error("Failed to delete drone remote", e)
-        }
-      },
-
-      updateDrone: async (id, updates) => {
-        const { updateDrone: fsUpdateDrone } = await import("./firestore-service")
-
-        // Optimistic
-        set((state) => ({
-          drones: state.drones.map((d) =>
-            d.id === id
-              ? {
-                ...d,
-                ...updates,
-                location: mergeLocation(d.location, updates.location),
-                lastSeen: Date.now(),
-              }
-              : d,
-          ),
-        }))
-
-        try {
-          // We only persist core data, not high-frequency telemetry like lat/lng/battery unless needed
-          // For now, let's persist status and name/model
-          const persistentKeys: (keyof DroneData)[] = ['name', 'model', 'status', 'lastSeen']
-          const persistPayload: any = {}
-          persistentKeys.forEach(k => {
-            if (k in updates) persistPayload[k] = (updates as any)[k]
-          })
-
-          if (Object.keys(persistPayload).length > 0) {
-            await fsUpdateDrone(id, persistPayload)
+      addDrone: (drone) =>
+        set((state) => {
+          const id = drone.id ?? `drone-${Date.now()}`
+          const next: Drone = {
+            ...drone,
+            id,
+            lastSeen: nowISO(),
           }
-        } catch (e) {
-          console.error("Failed to update drone remote", e)
-        }
-      },
+          const exists = state.drones.some((d) => d.id === id)
 
+          const drones = exists
+            ? state.drones.map((d) => (d.id === id ? { ...d, ...next, location: mergeLocation(d.location, next.location) } : d))
+            : [...state.drones, next]
+
+          return {
+            drones,
+            selectedDrone: state.selectedDrone ?? id,
+          }
+        }),
+      removeDrone: (id) =>
+        set((state) => {
+          const filtered = state.drones.filter((d) => d.id !== id)
+          return {
+            drones: filtered,
+            selectedDrone: state.selectedDrone === id ? filtered[0]?.id ?? null : state.selectedDrone,
+          }
+        }),
+      updateDrone: (id, updates) =>
+        set((state) => {
+          const exists = state.drones.some((d) => d.id === id)
+          if (!exists) {
+            return {
+              drones: [
+                ...state.drones,
+                {
+                  id,
+                  name: id,
+                  model: "Unknown",
+                  status: "offline",
+                  mode: "Standby",
+                  battery: 0,
+                  signal: 0,
+                  lastSeen: nowISO(),
+                  ...updates,
+                },
+              ],
+              selectedDrone: state.selectedDrone ?? id,
+            }
+          }
+
+          return {
+            drones: state.drones.map((d) =>
+              d.id === id
+                ? {
+                    ...d,
+                    ...updates,
+                    location: mergeLocation(d.location, updates.location),
+                    lastSeen: nowISO(),
+                  }
+                : d,
+            ),
+          }
+        }),
       selectDrone: (id) => {
         const exists = get().drones.some((d) => d.id === id)
         if (!exists) return
@@ -156,7 +117,6 @@ export const useDroneStore = create<DroneStore>()(
     }),
     {
       name: "jawji-drone-store",
-      partialize: (state) => ({ selectedDrone: state.selectedDrone })
     },
   ),
 )
