@@ -1,8 +1,14 @@
 "use client"
 
-import type React from "react"
-
 import { useEffect, useRef, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Layers } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface Waypoint {
   id: string
@@ -33,295 +39,160 @@ export function MapView({
   heading,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [mapSize, setMapSize] = useState({ width: 0, height: 0 })
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const [mapCenter, setMapCenter] = useState(center)
-  const [mapZoom, setMapZoom] = useState(zoom)
+  const mapInstanceRef = useRef<any>(null)
+  const layerGroupRef = useRef<any>(null)
+  const tileLayerRef = useRef<any>(null)
+  const [activeLayer, setActiveLayer] = useState<"vector" | "dark" | "satellite">("vector")
+  const [isMapReady, setIsMapReady] = useState(false)
 
   useEffect(() => {
-    if (containerRef.current) {
-      const updateSize = () => {
-        setMapSize({
-          width: containerRef.current?.clientWidth || 0,
-          height: containerRef.current?.clientHeight || 0,
+    let destroyed = false
+
+    async function initMap() {
+      if (!containerRef.current || mapInstanceRef.current) return
+
+      const L = (await import("leaflet")).default
+
+      // Fix icons
+      const iconUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png"
+      const iconRetinaUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png"
+      const shadowUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png"
+        ; (L as any).Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl })
+
+      if (destroyed) return
+
+      const map = L.map(containerRef.current, {
+        zoomControl: false,
+        attributionControl: false
+      }).setView(center, zoom)
+
+      mapInstanceRef.current = map
+
+      // Add zoom control to top-right
+      L.control.zoom({ position: 'topright' }).addTo(map)
+
+      // Add attribution to bottom-right
+      L.control.attribution({ position: 'bottomright' }).addTo(map)
+
+      layerGroupRef.current = L.layerGroup().addTo(map)
+
+      // Add click handler
+      map.on('click', (e: any) => {
+        onMapClick?.(e.latlng.lat, e.latlng.lng)
+      })
+
+      setIsMapReady(true)
+    }
+
+    initMap()
+
+    return () => {
+      destroyed = true
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      mapInstanceRef.current?.remove()
+      mapInstanceRef.current = null
+    }
+  }, []) // Init once
+
+  // Update Layers
+  useEffect(() => {
+    if (!isMapReady || !mapInstanceRef.current) return
+    const map = mapInstanceRef.current
+
+    import("leaflet").then((mod) => {
+      const L = mod.default
+
+      if (tileLayerRef.current) {
+        map.removeLayer(tileLayerRef.current)
+      }
+
+      let tileUrl = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      let attribution = '&copy; OpenStreetMap contributors'
+
+      if (activeLayer === "dark") {
+        tileUrl = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        attribution = '&copy; OpenStreetMap &copy; CartoDB'
+      } else if (activeLayer === "satellite") {
+        tileUrl = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+        attribution = 'Tiles &copy; Esri'
+      }
+
+      tileLayerRef.current = L.tileLayer(tileUrl, { attribution }).addTo(map)
+    })
+
+  }, [activeLayer, isMapReady])
+
+  // Update View
+  useEffect(() => {
+    if (isMapReady && mapInstanceRef.current && center) {
+      mapInstanceRef.current.setView(center, zoom)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [center[0], center[1], zoom, isMapReady])
+
+  // Update Waypoints
+  useEffect(() => {
+    if (!isMapReady || !mapInstanceRef.current || !layerGroupRef.current) return
+
+    import("leaflet").then((mod) => {
+      const L = mod.default
+      const layerGroup = layerGroupRef.current
+      layerGroup.clearLayers()
+
+      // Add path
+      if (waypoints.length > 1) {
+        const latlngs = waypoints.map(w => [w.lat, w.lng]) as [number, number][]
+        (L as any).polyline(latlngs, { color: 'red', dashArray: '10, 10' }).addTo(layerGroup)
+      }
+
+      // Add markers
+      waypoints.forEach((wp, idx) => {
+        const isCurrent = wp.action === "current"
+        const isSelected = selectedWaypoint === wp.id
+
+        const divIcon = L.divIcon({
+          className: 'bg-transparent',
+          html: isCurrent
+            ? `<div class="relative flex items-center justify-center w-10 h-10">
+                     <div class="absolute w-full h-full bg-primary/30 rounded-full animate-ping"></div>
+                     <div class="relative w-8 h-8 bg-primary rounded-full border-2 border-white flex items-center justify-center shadow-lg" style="transform: rotate(${heading || 0}deg)">
+                        <div class="w-0 h-0 border-l-4 border-r-4 border-b-8 border-l-transparent border-r-transparent border-b-white"></div>
+                     </div>
+                   </div>`
+            : `<div class="flex items-center justify-center w-8 h-8 rounded-full ${isSelected ? 'bg-primary ring-2 ring-white scale-110' : 'bg-primary/80'} text-white font-bold shadow-md text-xs">
+                     ${idx + 1}
+                   </div>`,
+          iconSize: [40, 40],
+          iconAnchor: [20, 20]
         })
-      }
-      updateSize()
-      window.addEventListener("resize", updateSize)
-      const ro = new ResizeObserver(() => updateSize())
-      ro.observe(containerRef.current)
-      return () => {
-        window.removeEventListener("resize", updateSize)
-        try { ro.disconnect() } catch {}
-      }
-    }
-  }, [])
 
-  useEffect(() => {
-    if (!center) return
-    setMapCenter(center)
-  }, [center])
+        const marker = (L as any).marker([wp.lat, wp.lng], { icon: divIcon })
+        marker.on('click', () => onWaypointClick(wp.id))
+        marker.addTo(layerGroup)
+      })
+    })
 
-  // Convert lat/lng to pixel coordinates
-  const latLngToPixel = (lat: number, lng: number) => {
-    const scale = Math.pow(2, mapZoom)
-    const worldWidth = 256 * scale
-    const worldHeight = 256 * scale
+  }, [waypoints, selectedWaypoint, heading, isMapReady])
 
-    const x = ((lng + 180) / 360) * worldWidth
-    const latRad = (lat * Math.PI) / 180
-    const mercN = Math.log(Math.tan(Math.PI / 4 + latRad / 2))
-    const y = worldHeight / 2 - (worldWidth * mercN) / (2 * Math.PI)
-
-    const centerX = ((mapCenter[1] + 180) / 360) * worldWidth
-    const centerLatRad = (mapCenter[0] * Math.PI) / 180
-    const centerMercN = Math.log(Math.tan(Math.PI / 4 + centerLatRad / 2))
-    const centerY = worldHeight / 2 - (worldWidth * centerMercN) / (2 * Math.PI)
-
-    return {
-      x: x - centerX + mapSize.width / 2,
-      y: y - centerY + mapSize.height / 2,
-    }
-  }
-
-  // Convert pixel coordinates to lat/lng
-  const pixelToLatLng = (x: number, y: number) => {
-    const scale = Math.pow(2, mapZoom)
-    const worldWidth = 256 * scale
-    const worldHeight = 256 * scale
-
-    const centerX = ((mapCenter[1] + 180) / 360) * worldWidth
-    const centerLatRad = (mapCenter[0] * Math.PI) / 180
-    const centerMercN = Math.log(Math.tan(Math.PI / 4 + centerLatRad / 2))
-    const centerY = worldHeight / 2 - (worldWidth * centerMercN) / (2 * Math.PI)
-
-    const worldX = x - mapSize.width / 2 + centerX
-    const worldY = y - mapSize.height / 2 + centerY
-
-    const lng = (worldX / worldWidth) * 360 - 180
-    const mercN = (worldHeight / 2 - worldY) * ((2 * Math.PI) / worldWidth)
-    const latRad = 2 * Math.atan(Math.exp(mercN)) - Math.PI / 2
-    const lat = (latRad * 180) / Math.PI
-
-    return { lat, lng }
-  }
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true)
-    setDragStart({ x: e.clientX, y: e.clientY })
-  }
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return
-
-    const dx = e.clientX - dragStart.x
-    const dy = e.clientY - dragStart.y
-
-    const scale = Math.pow(2, mapZoom)
-    const worldWidth = 256 * scale
-
-    const dLng = -(dx / worldWidth) * 360
-    const dLat = (dy / worldWidth) * 360 * 0.5
-
-    setMapCenter([mapCenter[0] + dLat, mapCenter[1] + dLng])
-    setDragStart({ x: e.clientX, y: e.clientY })
-  }
-
-  const handleMouseUp = () => {
-    setIsDragging(false)
-  }
-
-  const handleClick = (e: React.MouseEvent) => {
-    if (isDragging) return
-
-    const rect = containerRef.current?.getBoundingClientRect()
-    if (!rect) return
-
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-
-    // Check if clicked on a waypoint
-    let clickedWaypoint = false
-    for (const waypoint of waypoints) {
-      const pos = latLngToPixel(waypoint.lat, waypoint.lng)
-      const distance = Math.sqrt(Math.pow(pos.x - x, 2) + Math.pow(pos.y - y, 2))
-      if (distance < 20) {
-        onWaypointClick(waypoint.id)
-        clickedWaypoint = true
-        break
-      }
-    }
-
-    // If no waypoint clicked, add new waypoint
-    if (!clickedWaypoint && onMapClick) {
-      const { lat, lng } = pixelToLatLng(x, y)
-      onMapClick(lat, lng)
-    }
-  }
-
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault()
-    const delta = e.deltaY > 0 ? -1 : 1
-    setMapZoom(Math.max(3, Math.min(18, mapZoom + delta)))
-  }
-
-  // Calculate tile coordinates for the current view
-  const getTileUrl = (x: number, y: number, z: number) => {
-    return `https://tile.openstreetmap.org/${z}/${x}/${y}.png`
-  }
-
-  const tileSize = 256
-  const scale = Math.pow(2, mapZoom)
-  const centerTileX = Math.floor(((mapCenter[1] + 180) / 360) * scale)
-  const centerTileY = Math.floor(
-    ((1 - Math.log(Math.tan((mapCenter[0] * Math.PI) / 180) + 1 / Math.cos((mapCenter[0] * Math.PI) / 180)) / Math.PI) /
-      2) *
-      scale,
-  )
-
-  const tilesX = Math.ceil(mapSize.width / tileSize) + 2
-  const tilesY = Math.ceil(mapSize.height / tileSize) + 2
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full h-full overflow-hidden bg-muted rounded-lg cursor-grab active:cursor-grabbing"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onClick={handleClick}
-      onWheel={handleWheel}
-    >
-      {/* Map tiles */}
-      <div className="absolute inset-0">
-        {Array.from({ length: tilesY }).map((_, ty) =>
-          Array.from({ length: tilesX }).map((_, tx) => {
-            const tileX = centerTileX + tx - Math.floor(tilesX / 2)
-            const tileY = centerTileY + ty - Math.floor(tilesY / 2)
+    <div className="relative w-full h-full">
+      <div ref={containerRef} className="w-full h-full outline-none bg-muted" />
 
-            const centerPixel = latLngToPixel(mapCenter[0], mapCenter[1])
-            const left = mapSize.width / 2 - centerPixel.x + tileX * tileSize
-            const top = mapSize.height / 2 - centerPixel.y + tileY * tileSize
-
-            return (
-              <img
-                key={`${tileX}-${tileY}`}
-                src={getTileUrl(tileX, tileY, mapZoom) || "/placeholder.svg"}
-                alt=""
-                className="absolute pointer-events-none"
-                style={{
-                  left: `${left}px`,
-                  top: `${top}px`,
-                  width: `${tileSize}px`,
-                  height: `${tileSize}px`,
-                }}
-                loading="lazy"
-                decoding="async"
-              />
-            )
-          }),
-        )}
-      </div>
-
-      {/* Waypoint path */}
-      {waypoints.length > 1 && (
-        <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
-          <polyline
-            points={waypoints
-              .map((wp) => {
-                const pos = latLngToPixel(wp.lat, wp.lng)
-                return `${pos.x},${pos.y}`
-              })
-              .join(" ")}
-            fill="none"
-            stroke="hsl(var(--primary))"
-            strokeWidth="3"
-            strokeDasharray="10,10"
-            opacity="0.7"
-          />
-        </svg>
-      )}
-
-      {/* Waypoint markers */}
-      {waypoints.map((waypoint, index) => {
-        const pos = latLngToPixel(waypoint.lat, waypoint.lng)
-        const isSelected = selectedWaypoint === waypoint.id
-
-        return (
-          <div
-            key={waypoint.id}
-            className="absolute pointer-events-none"
-            style={{
-              left: `${pos.x}px`,
-              top: `${pos.y}px`,
-              transform: "translate(-50%, -50%)",
-              zIndex: isSelected ? 3 : 2,
-            }}
-          >
-            {waypoint.action === "current" ? (
-              <div className="relative">
-                <span className="absolute inset-0 -m-2 rounded-full bg-primary/30 blur-md animate-ping" />
-                {/* Heading arrow */}
-                <div
-                  className="absolute left-1/2 -translate-x-1/2 -top-5"
-                  style={{ transform: `translateX(-50%) rotate(${(heading ?? 0)}deg)` }}
-                >
-                  <div className="w-0 h-0 border-l-4 border-r-4 border-b-8 border-l-transparent border-r-transparent border-b-primary drop-shadow" />
-                </div>
-                <div
-                  className={`flex items-center justify-center rounded-full font-bold text-sm transition-all ${
-                    isSelected
-                      ? "w-10 h-10 bg-primary text-primary-foreground ring-4 ring-primary/30"
-                      : "w-9 h-9 bg-primary text-primary-foreground"
-                  }`}
-                  style={{ boxShadow: "0 4px 12px rgba(0,0,0,0.35)" }}
-                >
-                  DRN
-                </div>
-              </div>
-            ) : (
-              <div
-                className={`flex items-center justify-center rounded-full font-bold text-sm transition-all ${
-                  isSelected
-                    ? "w-10 h-10 bg-primary text-primary-foreground ring-4 ring-primary/30"
-                    : "w-8 h-8 bg-primary/80 text-primary-foreground"
-                }`}
-                style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}
-              >
-                {index + 1}
-              </div>
-            )}
-          </div>
-        )
-      })}
-
-      {/* Map controls */}
-      <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
-        <button
-          className="w-8 h-8 bg-card border border-border rounded flex items-center justify-center hover:bg-accent transition-colors"
-          onClick={(e) => {
-            e.stopPropagation()
-            setMapZoom(Math.min(18, mapZoom + 1))
-          }}
-        >
-          +
-        </button>
-        <button
-          className="w-8 h-8 bg-card border border-border rounded flex items-center justify-center hover:bg-accent transition-colors"
-          onClick={(e) => {
-            e.stopPropagation()
-            setMapZoom(Math.max(3, mapZoom - 1))
-          }}
-        >
-          −
-        </button>
-      </div>
-
-      {/* Attribution */}
-      <div className="absolute bottom-2 right-2 text-[10px] text-muted-foreground bg-card/80 px-2 py-1 rounded z-10">
-        © OpenStreetMap
+      {/* Layer Control */}
+      <div className="absolute top-4 left-4 z-[400]">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="secondary" size="icon" className="h-8 w-8 bg-card/90 backdrop-blur border shadow-md">
+              <Layers className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => setActiveLayer("vector")}>Vector</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setActiveLayer("dark")}>Dark Ops</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setActiveLayer("satellite")}>Satellite</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )

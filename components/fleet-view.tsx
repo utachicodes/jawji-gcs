@@ -104,7 +104,7 @@ export default function FleetView() {
     setOpen(false)
   }
 
-  const activeDrones = useMemo(() => drones.filter((d) => d.status === "online" || d.status === "flying"), [drones])
+  // const activeDrones = useMemo(() => drones.filter((d) => d.status === "online" || d.status === "flying"), [drones])
 
   useEffect(() => {
     let destroyed = false
@@ -117,7 +117,7 @@ export default function FleetView() {
       const iconUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png"
       const iconRetinaUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png"
       const shadowUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png"
-      ;(L as any).Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl })
+        ; (L as any).Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl })
       const map = L.map(mapEl.current, { zoomControl: true })
       mapRef.current = map
       const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -131,7 +131,7 @@ export default function FleetView() {
     init()
     return () => {
       destroyed = true
-      try { mapRef.current && mapRef.current.remove() } catch {}
+      try { mapRef.current && mapRef.current.remove() } catch { }
     }
   }, [])
 
@@ -141,20 +141,36 @@ export default function FleetView() {
       if (!mapRef.current || !markersLayerRef.current) return
       markersLayerRef.current.clearLayers()
       const bounds = new (L as any).LatLngBounds([])
-      activeDrones.forEach((d) => {
+      drones.forEach((d) => {
         const lat = d.location?.lat ?? 0
         const lng = d.location?.lng ?? 0
-        const marker = (L as any).marker([lat, lng])
+        const isOnline = d.status === "online" || d.status === "flying"
+
+        // Define color based on status
+        let color = "gray"
+        if (d.status === "flying") color = "green"
+        else if (d.status === "online") color = "blue"
+        else if (d.status === "error") color = "red"
+
+        // Simple circle marker for better density
+        const marker = (L as any).circleMarker([lat, lng], {
+          radius: 8,
+          fillColor: color,
+          color: "#fff",
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.8
+        })
           .bindPopup(`<b>${d.name}</b><br/>${d.model}<br/>${d.status.toUpperCase()}`)
         markersLayerRef.current.addLayer(marker)
-        bounds.extend([lat, lng])
+        if (lat !== 0 || lng !== 0) bounds.extend([lat, lng])
       })
-      if (activeDrones.length > 0 && bounds.isValid && bounds.isValid()) {
+      if (drones.length > 0 && bounds.isValid && bounds.isValid()) {
         mapRef.current.fitBounds(bounds, { padding: [30, 30], maxZoom: 12 })
       }
     }
     updateMarkers()
-  }, [activeDrones])
+  }, [drones])
 
   const exportJson = () => {
     const blob = new Blob([JSON.stringify(drones, null, 2)], { type: "application/json" })
@@ -174,7 +190,7 @@ export default function FleetView() {
         if (!x?.name || !x?.model) continue
         addDrone({ name: String(x.name), model: String(x.model), status: x.status === "online" || x.status === "flying" ? "online" : "offline", mode: x.mode ? String(x.mode) : "Standby", battery: typeof x.battery === "number" ? x.battery : 100, signal: typeof x.signal === "number" ? x.signal : 0 })
       }
-    } catch {}
+    } catch { }
   }
 
   return (
@@ -274,7 +290,7 @@ export default function FleetView() {
         <CardContent>
           <div ref={mapEl} className="h-72 w-full rounded-md overflow-hidden border" />
           <div className="text-xs text-muted-foreground mt-2">
-            Showing {activeDrones.length} active drone{activeDrones.length === 1 ? "" : "s"}
+            Showing all {drones.length} drone{drones.length === 1 ? "" : "s"}
           </div>
         </CardContent>
       </Card>

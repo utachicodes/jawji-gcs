@@ -16,58 +16,75 @@ export function MapGeofence({ value, onChange }: { value?: string; onChange: (ge
   useEffect(() => {
     let destroyed = false
     async function init() {
-      const L = (await import("leaflet")).default
-      await import("leaflet-draw")
-      if (destroyed || !mapRef.current) return
-      leafletRef.current = L
-
-      const map = L.map(mapRef.current, { zoomControl: true })
-      mapInstanceRef.current = map
-      const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap contributors",
-      })
-      osm.addTo(map)
-      map.setView([0, 0], 2)
-
-      const drawnItems = (drawnRef.current = new (L as any).FeatureGroup())
-      map.addLayer(drawnItems)
-
-      const drawControl = new (L as any).Control.Draw({
-        draw: {
-          marker: false,
-          circle: false,
-          circlemarker: false,
-          rectangle: false,
-          polyline: false,
-          polygon: {
-            allowIntersection: false,
-            showArea: true,
-          },
-        },
-        edit: { featureGroup: drawnItems },
-      })
-      map.addControl(drawControl)
-
-      map.on((L as any).Draw.Event.CREATED, (e: any) => {
-        const layer = e.layer
-        drawnItems.clearLayers()
-        drawnItems.addLayer(layer)
-        const gj = layer.toGeoJSON()
-        const text = JSON.stringify(gj)
-        setGeojsonText(text)
-        onChange(text)
-      })
-
-      // Load initial value if provided
       try {
-        if (value) {
-          const gj = JSON.parse(value)
-          const layer = (L as any).geoJSON(gj)
-          layer.addTo(drawnItems)
-          const b = layer.getBounds?.() || drawnItems.getBounds?.()
-          if (b && b.isValid && b.isValid()) map.fitBounds(b, { padding: [20, 20] })
+        const L = (await import("leaflet")).default
+        // Try to import leaflet-draw, catch specific error if it fails
+        try {
+          await import("leaflet-draw")
+        } catch (e) {
+          console.error("Leaflet draw import failed:", e)
         }
-      } catch {}
+
+        if (destroyed || !mapRef.current) return
+        leafletRef.current = L
+
+        const map = L.map(mapRef.current, { zoomControl: true })
+        mapInstanceRef.current = map
+        const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "&copy; OpenStreetMap contributors",
+        })
+        osm.addTo(map)
+        map.setView([0, 0], 2)
+
+        const drawnItems = (drawnRef.current = new (L as any).FeatureGroup())
+        map.addLayer(drawnItems)
+
+        try {
+          if ((L as any).Control && (L as any).Control.Draw) {
+            const drawControl = new (L as any).Control.Draw({
+              draw: {
+                marker: false,
+                circle: false,
+                circlemarker: false,
+                rectangle: false,
+                polyline: false,
+                polygon: {
+                  allowIntersection: false,
+                  showArea: true,
+                },
+              },
+              edit: { featureGroup: drawnItems },
+            })
+            map.addControl(drawControl)
+
+            map.on((L as any).Draw.Event.CREATED, (e: any) => {
+              const layer = e.layer
+              drawnItems.clearLayers()
+              drawnItems.addLayer(layer)
+              const gj = layer.toGeoJSON()
+              const text = JSON.stringify(gj)
+              setGeojsonText(text)
+              onChange(text)
+            })
+          }
+        } catch (drawError) {
+          console.warn("Leaflet Draw control failed to init", drawError)
+        }
+
+        // Load initial value if provided
+        try {
+          if (value) {
+            const gj = JSON.parse(value)
+            const layer = (L as any).geoJSON(gj)
+            layer.addTo(drawnItems)
+            const b = layer.getBounds?.() || drawnItems.getBounds?.()
+            if (b && b.isValid && b.isValid()) map.fitBounds(b, { padding: [20, 20] })
+          }
+        } catch { }
+      } catch (err: any) {
+        console.error("MapGeofence init failed:", err)
+        // alert("Map Error: " + err.message) // Optional: uncomment if debugging with user visible feedback needed
+      }
     }
 
     init()
@@ -75,7 +92,7 @@ export function MapGeofence({ value, onChange }: { value?: string; onChange: (ge
       destroyed = true
       try {
         mapInstanceRef.current && mapInstanceRef.current.remove()
-      } catch {}
+      } catch { }
     }
   }, [])
 
@@ -103,7 +120,7 @@ export function MapGeofence({ value, onChange }: { value?: string; onChange: (ge
               drawnRef.current?.clearLayers()
               setGeojsonText("")
               onChange("")
-            } catch {}
+            } catch { }
           }}
         >
           Clear

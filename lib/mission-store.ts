@@ -71,6 +71,23 @@ export const useMissionStore = create<MissionStore>()(
           lastModified: "2025-01-11",
           status: "completed",
         },
+        {
+          id: "seed-3",
+          name: "Delivery with Kiosks",
+          description: "Autonomous delivery routine: Warehouse Pickup -> Kiosk A -> Kiosk B -> Return",
+          waypoints: 4,
+          distance: 5.2,
+          duration: 12.0,
+          createdAt: "2025-01-20",
+          lastModified: "2025-01-22",
+          status: "ready",
+          waypointData: [
+            { id: "wp-1", lat: 37.7749, lng: -122.4194, altitude: 30, action: "takeoff" },
+            { id: "wp-2", lat: 37.7800, lng: -122.4200, altitude: 50, action: "pickup" },
+            { id: "wp-3", lat: 37.7850, lng: -122.4250, altitude: 50, action: "dropoff" },
+            { id: "wp-4", lat: 37.7749, lng: -122.4194, altitude: 30, action: "land" }
+          ]
+        },
       ],
       addMission: (m) => {
         const now = new Date().toISOString().split("T")[0]

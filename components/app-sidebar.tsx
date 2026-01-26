@@ -54,7 +54,7 @@ export function AppSidebar() {
                 >
                   <Link href={item.url}>
                     <div className="flex items-center gap-3 w-full">
-                      <div className={`flex items-center justify-center h-7 w-7 rounded-md border ${active ? 'bg-primary-foreground/10 border-primary-foreground/20' : 'bg-muted/50 border-border/60'} transition-colors shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]` }>
+                      <div className={`flex items-center justify-center h-7 w-7 rounded-md border ${active ? 'bg-primary-foreground/10 border-primary-foreground/20' : 'bg-muted/50 border-border/60'} transition-colors shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]`}>
                         <Icon className="h-4 w-4" />
                       </div>
                       <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
