@@ -162,8 +162,9 @@ export function MapView({
           html: `<div class="flex items-center justify-center w-6 h-6 rounded bg-blue-500 border-2 border-white shadow-md text-white font-bold text-[10px]">H</div>`,
           iconSize: [24, 24],
           iconAnchor: [12, 12]
-        })
-          (L as any).marker([homePosition.lat, homePosition.lng], { icon: homeIcon, zIndexOffset: 50 }).addTo(layerGroup)
+        });
+
+        (L as any).marker([homePosition.lat, homePosition.lng], { icon: homeIcon, zIndexOffset: 50 }).addTo(layerGroup)
       }
 
       // Add markers
