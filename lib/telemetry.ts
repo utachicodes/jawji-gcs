@@ -65,3 +65,14 @@ export function deriveTelemetry(drone?: Drone | null): Telemetry {
     homeLocation: drone.homeLocation,
   }
 }
+
+import { useState, useEffect } from "react"
+export function useTelemetry() {
+  const [data, setData] = useState(EMPTY_TELEMETRY)
+
+  // In the future this could subscribe to a websocket
+  // For now it just returns empty static data
+  // The Dashboard prefers the DroneStore data anyway
+
+  return data
+}
