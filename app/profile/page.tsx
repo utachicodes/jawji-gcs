@@ -12,7 +12,7 @@ import { AppLayout } from "@/components/app-layout"
 export default function ProfilePage() {
     return (
         <AppLayout>
-            <div className="w-full space-y-8 animate-in fade-in duration-500">
+            <div className="w-full p-6 space-y-8 animate-in fade-in duration-500">
                 <div className="flex items-center gap-4">
                     <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center border-2 border-primary">
                         <User className="h-8 w-8 text-primary" />
