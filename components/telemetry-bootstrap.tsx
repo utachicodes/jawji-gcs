@@ -61,11 +61,17 @@ function applyUpdate(payload: any) {
       flightTime: telemetryPatch.flightTime,
       videoUrl: telemetryPatch.videoUrl,
       extras: telemetryPatch.extras,
+      homeLocation: location
     })
     if (!selectedDrone) {
       selectDrone(id)
     }
   } else {
+    // Auto-set home location if missing and we have good lock
+    const existingDrone = drones.find(d => d.id === id) as any
+    if (existingDrone && !existingDrone.homeLocation && location && (telemetryPatch.gpsSatellites as number || 0) > 4) {
+      telemetryPatch.homeLocation = location
+    }
     updateDrone(id, telemetryPatch)
   }
 }
@@ -108,6 +114,11 @@ function buildTelemetryPatch(payload: any, location?: { lat: number; lng: number
   if (isFiniteNumber(roll)) patch.roll = roll
   const yaw = toNumber(payload.yaw ?? payload.heading)
   if (isFiniteNumber(yaw)) patch.yaw = yaw
+  const verticalSpeed = toNumber(payload.verticalSpeed ?? payload.vertical_speed ?? payload.climb)
+  if (isFiniteNumber(verticalSpeed)) patch.verticalSpeed = verticalSpeed
+  const gpsSatellites = toNumber(payload.gpsSatellites ?? payload.satellites)
+  if (isFiniteNumber(gpsSatellites)) patch.gpsSatellites = gpsSatellites
+
   const temperature = toNumber(payload.temperature ?? payload.env?.temperature)
   if (isFiniteNumber(temperature)) patch.temperature = temperature
   const flightTime = toNumber(payload.flightTime)

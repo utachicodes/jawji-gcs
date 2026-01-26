@@ -33,7 +33,11 @@ export function StatusBar() {
 
   useEffect(() => {
     if (session?.user) {
-      setUser({ name: session.user.name || "Operator", email: session.user.email || "operator@jawji.com" })
+      let name = session.user.name || "Operator"
+      if (name === "Operator" && session.user.email) {
+        name = session.user.email.split("@")[0]
+      }
+      setUser({ name, email: session.user.email || "operator@jawji.com" })
     } else {
       const userData = typeof window !== "undefined" ? localStorage.getItem("jawji_user") : null
       if (userData) setUser(JSON.parse(userData))
@@ -68,7 +72,7 @@ export function StatusBar() {
           <SidebarIcon className="h-4 w-4" />
         </Button>
         <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <Image src="/jawji-logo.png" alt="JAWJI" width={140} height={40} className="h-8 w-auto" priority />
+          <Image src="/jawji-logo.png" alt="JAWJI" width={160} height={44} className="h-11 w-auto" priority />
         </Link>
       </div>
 
@@ -81,30 +85,32 @@ export function StatusBar() {
           {/* Flight Mode */}
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-xs uppercase tracking-wider">MODE</span>
-            <span className={currentDrone ? "text-foreground font-bold" : "text-muted-foreground"}>
-              {currentDrone?.mode || "N/A"}
+            <span className={currentDrone && (currentDrone.status === "online" || currentDrone.status === "flying") ? "text-foreground font-bold" : "text-muted-foreground"}>
+              {currentDrone && (currentDrone.status === "online" || currentDrone.status === "flying") ? currentDrone.mode : "---"}
             </span>
           </div>
 
           {/* Battery */}
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-xs uppercase tracking-wider">BAT</span>
-            <div className={`flex items-center gap-1 ${currentDrone ? (currentDrone.battery < 20 ? "text-red-500" : "text-emerald-500") : "text-muted-foreground"}`}>
-              <span className="font-bold">{currentDrone ? Math.round(currentDrone.battery) : "--"}%</span>
+            <div className={`flex items-center gap-1 ${currentDrone && (currentDrone.status === "online" || currentDrone.status === "flying") ? (currentDrone.battery < 20 ? "text-red-500" : "text-emerald-500") : "text-muted-foreground"}`}>
+              <span className="font-bold">{currentDrone && (currentDrone.status === "online" || currentDrone.status === "flying") ? Math.round(currentDrone.battery) + "%" : "---"}</span>
             </div>
           </div>
 
           {/* Satellites */}
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-xs uppercase tracking-wider">GPS</span>
-            <span className="font-bold">{currentDrone?.gpsSatellites || 0}</span>
+            <span className="font-bold">{currentDrone && (currentDrone.status === "online" || currentDrone.status === "flying") ? (currentDrone.gpsSatellites || 0) : "---"}</span>
           </div>
 
           {/* Link & Time */}
           <div className="flex items-center gap-4 border-l border-border pl-4">
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-xs uppercase tracking-wider">LINK</span>
-              <span className="text-emerald-500 font-bold">24ms</span>
+              <span className={currentDrone && (currentDrone.status === "online" || currentDrone.status === "flying") ? "text-emerald-500 font-bold" : "text-muted-foreground"}>
+                {currentDrone && (currentDrone.status === "online" || currentDrone.status === "flying") ? "24ms" : "---"}
+              </span>
             </div>
             <div className="font-mono text-muted-foreground font-medium">
               {time.split(' ')[0] || "00:00:00"}
@@ -129,10 +135,9 @@ export function StatusBar() {
             <Button variant="ghost" className="h-auto p-0 hover:bg-transparent flex items-center gap-3">
               <div className="text-right hidden sm:block">
                 <div className="text-sm font-semibold leading-none">{user?.name || "Operator"}</div>
-                <div className="text-[10px] text-muted-foreground leading-none mt-1">ADMIN</div>
               </div>
-              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs ring-2 ring-background">
-                {user?.name?.[0] || "O"}
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary ring-2 ring-background">
+                <User className="h-4 w-4" />
               </div>
             </Button>
           </DropdownMenuTrigger>

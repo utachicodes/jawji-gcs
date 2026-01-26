@@ -16,6 +16,8 @@ export type Telemetry = {
   flightMode: string
   gpsSatellites: number
   homeLocation?: { lat: number; lng: number; altitude: number }
+  verticalSpeed: number
+  distance: number
 }
 
 const EMPTY_TELEMETRY: Telemetry = {
@@ -33,6 +35,8 @@ const EMPTY_TELEMETRY: Telemetry = {
   flightTime: 0,
   flightMode: "N/A",
   gpsSatellites: 0,
+  verticalSpeed: 0,
+  distance: 0,
 }
 
 export function deriveTelemetry(drone?: Drone | null): Telemetry {
@@ -63,12 +67,32 @@ export function deriveTelemetry(drone?: Drone | null): Telemetry {
     flightMode: drone.mode || "N/A",
     gpsSatellites: drone.gpsSatellites ?? 0,
     homeLocation: drone.homeLocation,
+    verticalSpeed: drone.verticalSpeed ?? 0,
+    distance: drone.homeLocation && drone.location
+      ? calculateDistance(drone.homeLocation.lat, drone.homeLocation.lng, drone.location.lat, drone.location.lng)
+      : 0,
   }
 }
 
-import { useState, useEffect } from "react"
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  if (lat1 === 0 || lat2 === 0) return 0
+  const R = 6371e3 // metres
+  const φ1 = lat1 * Math.PI / 180
+  const φ2 = lat2 * Math.PI / 180
+  const Δφ = (lat2 - lat1) * Math.PI / 180
+  const Δλ = (lon2 - lon1) * Math.PI / 180
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ / 2) * Math.sin(Δλ / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+
+  return R * c
+}
+
+import { useState } from "react"
 export function useTelemetry() {
-  const [data, setData] = useState(EMPTY_TELEMETRY)
+  const [data] = useState(EMPTY_TELEMETRY)
 
   // In the future this could subscribe to a websocket
   // For now it just returns empty static data

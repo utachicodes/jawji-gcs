@@ -90,8 +90,19 @@ export function MapView({
 
     initMap()
 
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize()
+      }
+    })
+
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current)
+    }
+
     return () => {
       destroyed = true
+      resizeObserver.disconnect()
       // eslint-disable-next-line react-hooks/exhaustive-deps
       mapInstanceRef.current?.remove()
       mapInstanceRef.current = null

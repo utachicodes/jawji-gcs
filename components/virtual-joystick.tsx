@@ -70,14 +70,14 @@ export function VirtualJoystick({ onMove }: JoystickProps) {
   return (
     <div
       ref={containerRef}
-      className="relative w-40 h-40 rounded-full bg-muted border-2 border-border cursor-pointer touch-none"
+      className="relative w-40 h-40 rounded-full bg-white border-2 border-border cursor-pointer touch-none"
       onMouseDown={() => setIsDragging(true)}
       onTouchStart={() => setIsDragging(true)}
     >
       <div className="absolute inset-0 rounded-full bg-gradient-to-br from-muted/50 to-muted" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-1 bg-border rounded-full" />
       <div
-        className="absolute top-1/2 left-1/2 w-12 h-12 rounded-full bg-primary shadow-lg transition-transform"
+        className="absolute top-1/2 left-1/2 w-12 h-12 rounded-full bg-zinc-800 dark:bg-zinc-100 shadow-lg transition-transform flex items-center justify-center after:content-[''] after:w-3 after:h-3 after:rounded-full after:bg-zinc-600/50 dark:after:bg-zinc-300/50"
         style={{
           transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
         }}

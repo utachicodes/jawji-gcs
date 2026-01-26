@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server"
 import { subscribeTelemetry } from "@/lib/server/telemetry-pubsub"
+import { initMqttClient } from "@/lib/server/mqtt-client"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -17,6 +18,9 @@ function sseHeaders(origin: string | null): Headers {
 }
 
 export async function GET(req: NextRequest) {
+  // Ensure MQTT client is running (lazy init fallback)
+  initMqttClient()
+
   const encoder = new TextEncoder()
   let heartbeat: NodeJS.Timeout | null = null
   let unsubscribe: (() => void) | null = null

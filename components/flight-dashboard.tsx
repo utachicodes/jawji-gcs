@@ -12,6 +12,9 @@ import {
   Camera,
   AlertTriangle,
   CheckCircle2,
+  Move,
+  ArrowUp,
+  Compass,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -27,8 +30,12 @@ export function FlightDashboard() {
     battery: 87,
     signal: 92,
     temperature: 24,
-    satellites: 0,
+    satellites: 12,
     flightTime: 342,
+    distance: 128.5,
+    verticalSpeed: 0.0,
+    pitch: 0,
+    roll: 0,
   })
 
   const [altitudeData, setAltitudeData] = useState(
@@ -54,6 +61,12 @@ export function FlightDashboard() {
         speed: Math.max(0, prev.speed + (Math.random() - 0.5) * 0.5),
         heading: (prev.heading + Math.random() * 5) % 360,
         flightTime: prev.flightTime + 1,
+        // Simulate new metrics
+        distance: prev.distance + (prev.speed * 0.1), // moving away roughly
+        verticalSpeed: (Math.random() - 0.5) * 1.5,
+        pitch: (Math.random() - 0.5) * 10,
+        roll: (Math.random() - 0.5) * 10,
+        satellites: Math.max(8, Math.min(14, prev.satellites + (Math.random() > 0.9 ? (Math.random() > 0.5 ? 1 : -1) : 0))),
       }))
 
       setAltitudeData((prev) => {
@@ -183,6 +196,69 @@ export function FlightDashboard() {
           <CardContent>
             <div className="text-3xl font-bold font-mono">{telemetry.signal}%</div>
             <Progress value={telemetry.signal} className="mt-2" />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Extended Telemetry Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Move className="h-4 w-4 text-primary" />
+              Distance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold font-mono">{telemetry.distance.toFixed(1)}</div>
+            <p className="text-xs text-muted-foreground mt-1">meters from home</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <ArrowUp className="h-4 w-4 text-primary" />
+              Vertical Spd
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold font-mono">{telemetry.verticalSpeed.toFixed(1)}</div>
+            <p className="text-xs text-muted-foreground mt-1">m/s</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Compass className="h-4 w-4 text-primary" />
+              Orientation
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <div className="text-xs text-muted-foreground">PITCH</div>
+                <div className="text-lg font-bold font-mono">{telemetry.pitch.toFixed(1)}°</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">ROLL</div>
+                <div className="text-lg font-bold font-mono">{telemetry.roll.toFixed(1)}°</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Signal className="h-4 w-4 text-primary" />
+              Satellites
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold font-mono">{Math.round(telemetry.satellites)}</div>
+            <p className="text-xs text-muted-foreground mt-1">GPS Lock</p>
           </CardContent>
         </Card>
       </div>

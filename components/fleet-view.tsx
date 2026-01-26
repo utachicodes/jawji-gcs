@@ -38,7 +38,10 @@ export default function FleetView() {
     lat: number
     lng: number
     altitude: number
-  }>(() => ({ name: "", model: "", status: "offline", mode: "Standby", battery: 100, signal: 0, lat: 0, lng: 0, altitude: 0 }))
+    homeLat: number
+    homeLng: number
+    homeAlt: number
+  }>(() => ({ name: "", model: "", status: "offline", mode: "Standby", battery: 100, signal: 0, lat: 0, lng: 0, altitude: 0, homeLat: 0, homeLng: 0, homeAlt: 0 }))
 
   const filtered = useMemo(() => {
     return drones.filter((d) => {
@@ -50,7 +53,7 @@ export default function FleetView() {
 
   const beginCreate = () => {
     setEditing(null)
-    setForm({ name: "", model: "", status: "offline", mode: "Standby", battery: 100, signal: 0, lat: 0, lng: 0, altitude: 0 })
+    setForm({ name: "", model: "", status: "offline", mode: "Standby", battery: 100, signal: 0, lat: 0, lng: 0, altitude: 0, homeLat: 0, homeLng: 0, homeAlt: 0 })
     setOpen(true)
   }
 
@@ -66,6 +69,9 @@ export default function FleetView() {
       lat: d.location?.lat ?? 0,
       lng: d.location?.lng ?? 0,
       altitude: d.location?.altitude ?? 0,
+      homeLat: d.homeLocation?.lat ?? 0,
+      homeLng: d.homeLocation?.lng ?? 0,
+      homeAlt: d.homeLocation?.altitude ?? 0,
     })
     setOpen(true)
   }
@@ -80,6 +86,7 @@ export default function FleetView() {
 
   const submit = () => {
     if (!validForm) return
+    const homeLocation = (form.homeLat !== 0 || form.homeLng !== 0) ? { lat: Number(form.homeLat), lng: Number(form.homeLng), altitude: Number(form.homeAlt) } : undefined
     if (editing) {
       updateDrone(editing.id, {
         name: form.name.trim(),
@@ -89,6 +96,7 @@ export default function FleetView() {
         battery: Math.max(0, Math.min(100, Math.round(form.battery))),
         signal: Math.max(0, Math.min(100, Math.round(form.signal))),
         location: { lat: Number(form.lat) || 0, lng: Number(form.lng) || 0, altitude: Number(form.altitude) || 0 },
+        homeLocation,
       })
     } else {
       addDrone({
@@ -99,6 +107,7 @@ export default function FleetView() {
         battery: Math.max(0, Math.min(100, Math.round(form.battery))),
         signal: Math.max(0, Math.min(100, Math.round(form.signal))),
         location: { lat: Number(form.lat) || 0, lng: Number(form.lng) || 0, altitude: Number(form.altitude) || 0 },
+        homeLocation,
       } as any)
     }
     setOpen(false)
@@ -271,6 +280,20 @@ export default function FleetView() {
                   <div className="grid gap-2">
                     <Label className="font-mono text-xs">ALTITUDE (m)</Label>
                     <Input type="number" value={form.altitude} onChange={(e) => setForm((f) => ({ ...f, altitude: Number(e.target.value) }))} />
+                  </div>
+                </div>
+                <div className="grid md:grid-cols-3 gap-4 border-t pt-4">
+                  <div className="grid gap-2">
+                    <Label className="font-mono text-xs">HOME LAT</Label>
+                    <Input type="number" value={form.homeLat} onChange={(e) => setForm((f) => ({ ...f, homeLat: Number(e.target.value) }))} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="font-mono text-xs">HOME LNG</Label>
+                    <Input type="number" value={form.homeLng} onChange={(e) => setForm((f) => ({ ...f, homeLng: Number(e.target.value) }))} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="font-mono text-xs">HOME ALT (m)</Label>
+                    <Input type="number" value={form.homeAlt} onChange={(e) => setForm((f) => ({ ...f, homeAlt: Number(e.target.value) }))} />
                   </div>
                 </div>
               </div>

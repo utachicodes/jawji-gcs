@@ -17,6 +17,7 @@ export interface Drone {
   signal: number
   location?: DroneLocation
   speed?: number
+  verticalSpeed?: number
   heading?: number
   pitch?: number
   roll?: number
@@ -92,19 +93,9 @@ export const useDroneStore = create<DroneStore>()(
             return {
               drones: [
                 ...state.drones,
-                {
-                  id,
-                  name: id,
-                  model: "Unknown",
-                  status: "offline",
-                  mode: "Standby",
-                  battery: 0,
-                  signal: 0,
-                  lastSeen: nowISO(),
-                  ...updates,
-                },
+                // Removed mock drone creation
               ],
-              selectedDrone: state.selectedDrone ?? id,
+              selectedDrone: state.selectedDrone ?? null,
             }
           }
 
