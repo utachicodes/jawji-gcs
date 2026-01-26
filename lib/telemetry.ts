@@ -14,6 +14,8 @@ export type Telemetry = {
   longitude: number
   flightTime: number
   flightMode: string
+  gpsSatellites: number
+  homeLocation?: { lat: number; lng: number; altitude: number }
 }
 
 const EMPTY_TELEMETRY: Telemetry = {
@@ -30,6 +32,7 @@ const EMPTY_TELEMETRY: Telemetry = {
   longitude: 0,
   flightTime: 0,
   flightMode: "N/A",
+  gpsSatellites: 0,
 }
 
 export function deriveTelemetry(drone?: Drone | null): Telemetry {
@@ -58,5 +61,7 @@ export function deriveTelemetry(drone?: Drone | null): Telemetry {
     longitude,
     flightTime,
     flightMode: drone.mode || "N/A",
+    gpsSatellites: drone.gpsSatellites ?? 0,
+    homeLocation: drone.homeLocation,
   }
 }

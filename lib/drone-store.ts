@@ -25,6 +25,9 @@ export interface Drone {
   flightTime?: number
   videoUrl?: string
   extras?: Record<string, unknown>
+  gpsSatellites?: number
+  homeLocation?: DroneLocation
+  flightPath?: DroneLocation[]
   lastSeen: string
 }
 
@@ -57,7 +60,16 @@ export const useDroneStore = create<DroneStore>()(
           const exists = state.drones.some((d) => d.id === id)
 
           const drones = exists
-            ? state.drones.map((d) => (d.id === id ? { ...d, ...next, location: mergeLocation(d.location, next.location) } : d))
+            ? state.drones.map((d) => {
+              if (d.id === id) {
+                const newLocation = mergeLocation(d.location, next.location)
+                const newPath = next.location && isFiniteNumber(next.location.lat)
+                  ? [...(d.flightPath || []), next.location]
+                  : d.flightPath
+                return { ...d, ...next, location: newLocation, flightPath: newPath }
+              }
+              return d
+            })
             : [...state.drones, next]
 
           return {
@@ -100,11 +112,11 @@ export const useDroneStore = create<DroneStore>()(
             drones: state.drones.map((d) =>
               d.id === id
                 ? {
-                    ...d,
-                    ...updates,
-                    location: mergeLocation(d.location, updates.location),
-                    lastSeen: nowISO(),
-                  }
+                  ...d,
+                  ...updates,
+                  location: mergeLocation(d.location, updates.location),
+                  lastSeen: nowISO(),
+                }
                 : d,
             ),
           }

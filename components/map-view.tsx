@@ -27,6 +27,8 @@ interface MapViewProps {
   center?: [number, number]
   zoom?: number
   heading?: number
+  flightPath?: { lat: number; lng: number }[]
+  homePosition?: { lat: number; lng: number }
 }
 
 export function MapView({
@@ -37,6 +39,8 @@ export function MapView({
   center = [37.7749, -122.4194],
   zoom = 13,
   heading,
+  flightPath,
+  homePosition,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
@@ -145,6 +149,23 @@ export function MapView({
         (L as any).polyline(latlngs, { color: 'red', dashArray: '10, 10' }).addTo(layerGroup)
       }
 
+      // Render Historical Flight Path
+      if (flightPath && flightPath.length > 1) {
+        const trail = flightPath.map(p => [p.lat, p.lng]) as [number, number][]
+        (L as any).polyline(trail, { color: '#fbbf24', weight: 4, opacity: 0.6 }).addTo(layerGroup)
+      }
+
+      // Render Home Position
+      if (homePosition && homePosition.lat && homePosition.lng) {
+        const homeIcon = L.divIcon({
+          className: 'bg-transparent',
+          html: `<div class="flex items-center justify-center w-6 h-6 rounded bg-blue-500 border-2 border-white shadow-md text-white font-bold text-[10px]">H</div>`,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        })
+          (L as any).marker([homePosition.lat, homePosition.lng], { icon: homeIcon, zIndexOffset: 50 }).addTo(layerGroup)
+      }
+
       // Add markers
       waypoints.forEach((wp, idx) => {
         const isCurrent = wp.action === "current"
@@ -166,13 +187,13 @@ export function MapView({
           iconAnchor: [20, 20]
         })
 
-        const marker = (L as any).marker([wp.lat, wp.lng], { icon: divIcon })
+        const marker = (L as any).marker([wp.lat, wp.lng], { icon: divIcon, zIndexOffset: 100 })
         marker.on('click', () => onWaypointClick(wp.id))
         marker.addTo(layerGroup)
       })
     })
 
-  }, [waypoints, selectedWaypoint, heading, isMapReady])
+  }, [waypoints, selectedWaypoint, heading, isMapReady, flightPath, homePosition])
 
 
   return (
