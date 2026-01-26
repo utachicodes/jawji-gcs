@@ -26,7 +26,8 @@ export function UnifiedDashboard() {
   const [mapMode, setMapMode] = useState<"2D" | "3D">("2D")
   const [follow, setFollow] = useState(true)
 
-  const hasLiveFeed = !!activeDrone && !!activeDrone.videoUrl
+  // Show live feed if we have a URL OR if the drone is active (simulated feed)
+  const hasLiveFeed = !!activeDrone && (!!activeDrone.videoUrl || activeDrone.status === "online" || activeDrone.status === "flying")
   // Aerial drone footage for immersive view or use provided URL
   const liveFeedUrl = activeDrone?.videoUrl || "https://videos.pexels.com/video-files/855564/855564-hd_1920_1080_30fps.mp4"
 

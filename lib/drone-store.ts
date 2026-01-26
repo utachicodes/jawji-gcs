@@ -41,6 +41,7 @@ interface DroneStore {
   removeDrone: (id: string) => void
   updateDrone: (id: string, updates: Partial<Drone>) => void
   selectDrone: (id: string) => void
+  checkOffline: (timeoutMs: number) => void
 }
 
 const nowISO = () => new Date().toISOString()
@@ -117,6 +118,21 @@ export const useDroneStore = create<DroneStore>()(
         if (!exists) return
         set({ selectedDrone: id })
       },
+      checkOffline: (timeoutMs) =>
+        set((state) => {
+          const now = Date.now()
+          let changed = false
+          const newDrones = state.drones.map((d) => {
+            if (d.status === "offline") return d
+            const lastSeenTime = new Date(d.lastSeen).getTime()
+            if (now - lastSeenTime > timeoutMs) {
+              changed = true
+              return { ...d, status: "offline" as const, mode: "Disconnected", signal: 0 }
+            }
+            return d
+          })
+          return changed ? { drones: newDrones } : {}
+        }),
     }),
     {
       name: "jawji-drone-store",

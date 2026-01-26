@@ -82,6 +82,16 @@ export function StatusBar() {
         {/* Simplified Status Indicators (No Badges) */}
         <div className="hidden lg:flex items-center gap-6 text-sm font-medium text-foreground/80">
 
+          {/* Connected Drone Name */}
+          <div className="flex items-center gap-2 border-r border-border pr-6 mr-2">
+            <div className="flex flex-col items-end leading-none">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">CONNECTED TO</span>
+              <span className="font-mono font-bold text-primary">
+                {currentDrone ? currentDrone.name : "NO DRONE"}
+              </span>
+            </div>
+          </div>
+
           {/* Flight Mode */}
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-xs uppercase tracking-wider">MODE</span>

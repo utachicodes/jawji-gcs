@@ -29,9 +29,13 @@ def generate_telemetry(drone_id, start_time, base_location):
     
     # Altitude variation
     altitude = 50 + math.sin(elapsed * 0.5) * 5
-    # Vertical speed is derivative of altitude (approx)
-    # d(50 + 5sin(0.5t))/dt = 2.5cos(0.5t)
+    # Vertical speed
     vertical_speed = 2.5 * math.cos(elapsed * 0.5)
+
+    # Orientation
+    pitch = math.sin(elapsed * 0.2) * 5
+    roll = math.cos(elapsed * 0.3) * 5
+    yaw = (elapsed * speed * 180 / math.pi) % 360
 
     data = {
         "id": drone_id,
@@ -41,14 +45,19 @@ def generate_telemetry(drone_id, start_time, base_location):
             "altitude": altitude
         },
         "speed": 15.0 + random.uniform(-1, 1),
-        "vertical_speed": vertical_speed,
+        "verticalSpeed": vertical_speed,  # Note: camelCase to match TypeScript expectations if needed, or mapping in backend
         "battery": battery,
         "signal": 90 + random.uniform(-5, 5),
-        "heading": (elapsed * speed * 180 / math.pi) % 360,
+        "heading": yaw,
+        "pitch": pitch,
+        "roll": roll,
+        "yaw": yaw,
+        "temperature": 25 + random.uniform(-2, 2),
+        "mode": "GPS-Denied" if battery < 20 else "Auto",
         "status": "flying" if battery > 10 else "landed",
         "flightTime": elapsed,
         "timestamp": time.time() * 1000,
-        "gpsSatellites": 12  # Simulate good GPS
+        "gpsSatellites": 12
     }
     return data
 
@@ -76,7 +85,7 @@ def main():
             telemetry = generate_telemetry(args.id, start_time, base_location)
             payload = json.dumps(telemetry)
             client.publish(topic, payload)
-            print(f"Published to {topic}: Alt={telemetry['location']['altitude']:.1f}m Bat={telemetry['battery']:.1f}%")
+            print(f"Published: Mode={telemetry['mode']} Alt={telemetry['location']['altitude']:.1f}m Bat={telemetry['battery']:.1f}% Sats={telemetry['gpsSatellites']}")
             time.sleep(1) # 1Hz update rate
             
     except KeyboardInterrupt:
