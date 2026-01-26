@@ -19,7 +19,6 @@ export function UnifiedDashboard() {
   const { drones, selectedDrone } = useDroneStore()
   const activeDrone = drones.find(d => d.id === selectedDrone)
 
-  // Use real telemetry if available, otherwise fallback to store data
   const realTelemetry = useTelemetry()
   const telemetry = activeDrone ? {
     speed: activeDrone.speed ?? 0,
@@ -37,23 +36,21 @@ export function UnifiedDashboard() {
   const [mapMode, setMapMode] = useState<"2D" | "3D">("2D")
   const [follow, setFollow] = useState(true)
 
-  // Mock data for video feed
-  const hasLiveFeed = false // Set to true if activeDrone?.videoUrl is present
+  const hasLiveFeed = false
   const liveFeedUrl = activeDrone?.videoUrl
 
-  // Data for map
   const hasLocation = activeDrone?.location && activeDrone.location.lat !== 0
   const mapCenter: [number, number] = hasLocation
     ? [activeDrone!.location!.lat, activeDrone!.location!.lng]
     : [37.7749, -122.4194]
 
+  // Fix: Explicitly include altitude to satisfy Waypoint types
   const currentWaypoints = hasLocation
     ? [{ id: "drone", lat: activeDrone!.location!.lat, lng: activeDrone!.location!.lng, altitude: activeDrone!.location!.altitude ?? 0, action: "current" }]
     : []
 
   const handleJoystickMove = (x: number, y: number) => {
     console.log(`Joystick: ${x}, ${y}`)
-    // In a real app, send commands to drone via WebRTC/WebSocket
   }
 
   return (
@@ -61,12 +58,10 @@ export function UnifiedDashboard() {
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
 
-        {/* Left Column: MAIN VIEW (Video + Context) - 9 Cols for wider cinematic feel */}
+        {/* Left Column: MAIN VIEW (Video + Context) */}
         <div className="lg:col-span-9 flex flex-col gap-4 min-h-0 relative">
 
-          {/* Main Viewport Card */}
           <Card className="flex-1 p-0 overflow-hidden border-border/50 bg-black/5 relative group rounded-xl shadow-sm">
-            {/* Live Feed Layer */}
             <div className="absolute inset-0 bg-black/90 flex items-center justify-center">
               {hasLiveFeed ? (
                 <video
@@ -89,10 +84,8 @@ export function UnifiedDashboard() {
               )}
             </div>
 
-            {/* HUD Layer - Always on top of Video */}
             <div className="absolute inset-0 pointer-events-none p-6">
 
-              {/* Top Left: Recording & Storage */}
               <div className="absolute top-6 left-6 flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <div className="bg-red-500/20 text-red-500 border border-red-500/30 px-3 py-1 rounded text-[10px] font-bold tracking-wider flex items-center gap-2 backdrop-blur-sm">
@@ -105,7 +98,6 @@ export function UnifiedDashboard() {
                 </div>
               </div>
 
-              {/* Center: Attitude Indicator (Artificial Horizon) */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-64 opacity-40">
                 <svg viewBox="0 0 200 140" className="w-full h-full overflow-visible">
                   <g transform={`rotate(${-telemetry.roll} 100 70)`}>
@@ -119,12 +111,10 @@ export function UnifiedDashboard() {
                       ))}
                     </g>
                   </g>
-                  {/* Fixed Aircraft Reference */}
                   <path d="M90 70 L80 80 M110 70 L120 80 M100 65 L100 75" stroke="#f59e0b" strokeWidth="2" fill="none" />
                 </svg>
               </div>
 
-              {/* Bottom Left: Mini Map PIP */}
               <div className="absolute bottom-6 left-6 pointer-events-auto">
                 <div className="w-64 h-48 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 overflow-hidden shadow-2xl transition-all hover:w-[400px] hover:h-[300px] hover:border-white/20 group/map relative">
                   <div className="absolute top-2 right-2 z-10 opacity-0 group-hover/map:opacity-100 transition-opacity">
@@ -157,13 +147,11 @@ export function UnifiedDashboard() {
           </Card>
         </div>
 
-        {/* Right Column: INSTRUMENTS & CONTROLS - 3 Cols */}
+        {/* Right Column: INSTRUMENTS & CONTROLS */}
         <div className="lg:col-span-3 flex flex-col gap-3 min-h-0">
 
-          {/* Instrument Stack */}
           <div className="flex-1 flex flex-col gap-3">
 
-            {/* Primary Flight Display Card */}
             <Card className="p-4 bg-card/80 backdrop-blur border-border/60 shadow-sm flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase flex items-center gap-2">
@@ -172,7 +160,6 @@ export function UnifiedDashboard() {
                 </h3>
               </div>
 
-              {/* Big Heading Compass */}
               <div className="h-32 relative flex items-center justify-center my-2">
                 <div className="absolute inset-0 rounded-full border border-dashed border-muted-foreground/20" />
                 <div className="absolute inset-2 rounded-full border-2 border-primary/20"
@@ -187,7 +174,6 @@ export function UnifiedDashboard() {
                 </div>
               </div>
 
-              {/* Primary Metrics */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-accent/30 rounded p-2 border border-border/30">
                   <div className="text-[9px] uppercase text-muted-foreground mb-1">Altitude</div>
@@ -208,7 +194,6 @@ export function UnifiedDashboard() {
               </div>
             </Card>
 
-            {/* Control Surface */}
             <Card className="flex-1 p-4 bg-card/80 backdrop-blur border-border/60 shadow-sm flex flex-col">
               <h3 className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase mb-4 flex items-center gap-2">
                 <div className="i-lucide-gamepad-2 w-3 h-3" />
@@ -219,7 +204,6 @@ export function UnifiedDashboard() {
                 <VirtualJoystick onMove={handleJoystickMove} />
               </div>
 
-              {/* Quick Actions Grid */}
               <div className="grid grid-cols-2 gap-2">
                 <Button variant="outline" size="sm" className="h-8 text-[10px] font-bold hover:bg-orange-500 hover:text-white transition-colors">RTH</Button>
                 <Button variant="outline" size="sm" className="h-8 text-[10px] font-bold hover:bg-red-500 hover:text-white transition-colors">LAND</Button>
