@@ -48,7 +48,7 @@ export function UnifiedDashboard() {
     : [37.7749, -122.4194]
 
   const currentWaypoints = hasLocation
-    ? [{ id: "drone", lat: activeDrone!.location!.lat, lng: activeDrone!.location!.lng, action: "current" }]
+    ? [{ id: "drone", lat: activeDrone!.location!.lat, lng: activeDrone!.location!.lng, altitude: activeDrone!.location!.altitude ?? 0, action: "current" }]
     : []
 
   const handleJoystickMove = (x: number, y: number) => {
