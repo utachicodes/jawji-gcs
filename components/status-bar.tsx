@@ -70,135 +70,91 @@ export function StatusBar() {
   }
 
   return (
-    // Reverted to original height and background styles
-    <header className="h-16 border-b border-border/40 bg-background/60 backdrop-blur-md flex items-center justify-between px-4 sticky top-0 z-50 transition-all duration-200">
-      {/* Left: Branding & Clock */}
+    <header className="h-16 border-b border-border/40 bg-background/60 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-50 transition-all duration-200">
+      {/* Left: Branding */}
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={toggleSidebar} className="text-muted-foreground hover:text-foreground">
-            <SidebarIcon className="h-4 w-4" />
-          </Button>
-
-          <div className="h-6 w-px bg-border hidden sm:block" />
-
-          {/* Restored JAWJI Logo */}
-          <Link href="/" className="flex items-center gap-2 transition-opacity hover:opacity-80" aria-label="JAWJI Home">
-            <Image src="/jawji-logo.png" alt="JAWJI" width={100} height={24} className="h-6 w-auto" priority />
-          </Link>
-        </div>
+        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="text-muted-foreground hover:text-foreground">
+          <SidebarIcon className="h-4 w-4" />
+        </Button>
+        {/* Enlarged Logo */}
+        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <Image src="/jawji-logo.png" alt="JAWJI" width={140} height={40} className="h-8 w-auto" priority />
+        </Link>
       </div>
 
-      {/* Center: Active Asset & Flight Status */}
-      <div className="flex-1 flex items-center justify-center px-4">
+      {/* Right: Status, Actions & User */}
+      <div className="flex items-center gap-4">
+
+        {/* Status Indicators (Right Aligned) */}
         {currentDrone ? (
-          <div className="flex items-center gap-4 w-full max-w-3xl justify-center">
+          <div className="hidden lg:flex items-center gap-2 bg-accent/20 rounded-full border border-border/50 p-1 px-3 shadow-sm">
 
-            {/* Drone Selector - Integrated */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 gap-2 border-border/50 bg-background/50 hover:bg-accent/50 rounded-full px-3 hidden md:flex">
-                  <div className={`h-2 w-2 rounded-full ${currentDrone.status === "online" ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-gray-500"}`} />
-                  <span className="text-xs font-semibold">{currentDrone.name}</span>
-                  <ChevronDown className="h-3 w-3 opacity-50" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
-                <DropdownMenuLabel className="text-xs text-muted-foreground">SWITCH DRONE</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {drones.map((drone) => (
-                  <DropdownMenuItem key={drone.id} onClick={() => selectDrone(drone.id)}>
-                    {drone.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Status Bar Container */}
-            <div className="flex items-center gap-1 bg-accent/20 rounded-full border border-border/50 p-1 px-1 shadow-sm overflow-hidden">
-
-              {/* Flight Mode */}
-              <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${getModeColor(currentDrone.mode)}`}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg>
-                <span className="text-[10px] font-bold font-mono tracking-wider">{currentDrone.mode || "STABILIZE"}</span>
-              </div>
-
-              <div className="w-px h-4 bg-border/50 mx-1" />
-
-              {/* Battery */}
-              <div className="flex items-center gap-2 px-2 text-foreground/80">
-                <div className={currentDrone.battery < 20 ? "text-red-500" : "text-emerald-500"}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="18" height="12" rx="2" ry="2" /><line x1="23" y1="13" x2="23" y2="11" /></svg>
-                </div>
-                <div className="flex flex-col leading-none">
-                  <span className="text-[10px] font-bold font-mono">
-                    {Math.round(currentDrone.battery)}%
-                  </span>
-                  <span className="text-[8px] text-muted-foreground font-mono">18m</span>
-                </div>
-              </div>
-
-              <div className="w-px h-4 bg-border/50 mx-1" />
-
-              {/* GNSS */}
-              <div className="flex items-center gap-2 px-2 text-foreground/80 hidden sm:flex">
-                <div className="text-blue-500">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" /><line x1="6" y1="20" x2="6" y2="16" /></svg>
-                </div>
-                <div className="flex flex-col leading-none">
-                  <span className="text-[10px] font-bold font-mono">
-                    {currentDrone.gpsSatellites || 0}
-                  </span>
-                  <span className="text-[8px] text-muted-foreground font-mono">SATS</span>
-                </div>
-              </div>
-
-              <div className="w-px h-4 bg-border/50 mx-1 hidden sm:block" />
-
-              {/* Link Quality */}
-              <div className="flex items-center gap-2 px-2 text-foreground/80 hidden sm:flex">
-                <div className="text-emerald-500">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0" /><path d="M1.42 9a16 16 0 0 1 21.16 0" /><path d="M8.53 16.11a6 6 0 0 1 6.95 0" /><line x1="12" y1="20" x2="12.01" y2="20" /></svg>
-                </div>
-                <div className="flex flex-col leading-none">
-                  <span className="text-[10px] font-bold font-mono">
-                    {time.split(' ')[0]} {/* Clock embedded here for efficiency */}
-                  </span>
-                  <span className="text-[8px] text-muted-foreground font-mono">24ms</span>
-                </div>
-              </div>
-
+            {/* Flight Mode */}
+            <div className={`flex items-center gap-2 px-2 border-r border-border/50 pr-3 ${getModeColor(currentDrone.mode)} bg-transparent border-0`}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg>
+              <span className="text-[10px] font-bold font-mono tracking-wider text-foreground">{currentDrone.mode || "STABILIZE"}</span>
             </div>
+
+            {/* Battery */}
+            <div className="flex items-center gap-2 px-2 border-r border-border/50 pr-3">
+              <div className={currentDrone.battery < 20 ? "text-red-500" : "text-emerald-500"}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="18" height="12" rx="2" ry="2" /><line x1="23" y1="13" x2="23" y2="11" /></svg>
+              </div>
+              <div className="flex flex-col leading-none">
+                <span className="text-[10px] font-bold font-mono">
+                  {Math.round(currentDrone.battery)}%
+                </span>
+              </div>
+            </div>
+
+            {/* GNSS */}
+            <div className="flex items-center gap-2 px-2 border-r border-border/50 pr-3">
+              <div className="text-blue-500">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" /><line x1="6" y1="20" x2="6" y2="16" /></svg>
+              </div>
+              <span className="text-[10px] font-bold font-mono">{currentDrone.gpsSatellites || 0} Sats</span>
+            </div>
+
+            {/* Link Quality & Time */}
+            <div className="flex items-center gap-3 px-2">
+              <div className="flex items-center gap-1.5 text-emerald-500">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0" /><path d="M1.42 9a16 16 0 0 1 21.16 0" /><path d="M8.53 16.11a6 6 0 0 1 6.95 0" /><line x1="12" y1="20" x2="12.01" y2="20" /></svg>
+                <span className="text-[10px] font-bold font-mono text-foreground">24ms</span>
+              </div>
+              <div className="w-px h-3 bg-border" />
+              <span className="text-[10px] font-bold font-mono text-muted-foreground">{time.split(' ')[0]}</span>
+            </div>
+
           </div>
         ) : (
-          <div className="flex items-center gap-2 opacity-50 bg-accent/20 px-4 py-1.5 rounded-full">
+          <div className="hidden lg:flex items-center gap-2 opacity-50 bg-accent/20 px-4 py-1.5 rounded-full border border-border/50">
             <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="font-mono text-xs font-medium">SYSTEM OFFLINE</span>
+            <span className="font-mono text-xs font-medium">DISCONNECTED</span>
           </div>
         )}
-      </div>
 
-      {/* Right: Actions & User */}
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1 bg-accent/20 rounded-full p-1 border border-border/50">
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground">
-            <Bell className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          >
-            {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-          </Button>
-        </div>
+        {/* Theme Toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        >
+          {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+        </Button>
 
+        {/* User Profile */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-9 w-9 rounded-full p-0 overflow-hidden border border-border/50 hover:border-border transition-all ml-2">
-              <div className="h-full w-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+            <Button variant="ghost" className="h-9 pl-1 pr-3 rounded-full border border-border/50 hover:bg-accent hover:text-accent-foreground flex items-center gap-2 transition-all">
+              <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs ring-2 ring-background">
                 {user?.name?.[0] || "O"}
               </div>
+              {/* Visible Name */}
+              <div className="flex flex-col items-start hidden sm:flex">
+                <span className="text-xs font-semibold leading-none">{user?.name || "Operator"}</span>
+              </div>
+              <ChevronDown className="h-3 w-3 text-muted-foreground opacity-50" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
