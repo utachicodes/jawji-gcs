@@ -55,102 +55,108 @@ export function StatusBar() {
   const currentDrone = drones.find((d: Drone) => d.id === selectedDrone)
 
   return (
-    <div className="h-16 md:h-20 border-b border-white/10 bg-card/60 backdrop-blur supports-[backdrop-filter]:bg-card/40 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.45)] flex items-center justify-between px-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+    <header className="h-14 border-b border-white/5 bg-background/60 backdrop-blur-md flex items-center justify-between px-4 sticky top-0 z-50 transition-all duration-200">
+      {/* Left: Navigation & Branding */}
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="text-muted-foreground hover:text-foreground">
           <SidebarIcon className="h-4 w-4" />
         </Button>
 
-        <Link href="/" className="flex items-center gap-2" aria-label="JAWJI Home">
-          <Image src="/jawji-logo.png" alt="JAWJI" width={180} height={40} className="h-8 md:h-10 w-auto" priority />
+        <div className="h-6 w-px bg-white/10 mx-1 hidden sm:block" />
+
+        <Link href="/" className="flex items-center gap-2 transition-opacity hover:opacity-80" aria-label="JAWJI Home">
+          <Image src="/jawji-logo.png" alt="JAWJI" width={100} height={24} className="h-6 w-auto" priority />
         </Link>
+      </div>
 
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-sm font-medium text-foreground/90">System Online</span>
-        </div>
-
+      {/* Center: Drone Control & Status (Hidden on very small screens) */}
+      <div className="hidden md:flex items-center absolute left-1/2 -translate-x-1/2 gap-4">
+        {/* Drone Selector */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <span className="text-sm text-muted-foreground">Drone:</span>
-              <span className="text-sm font-mono">{currentDrone?.name || "No Drone"}</span>
-              <ChevronDown className="h-3 w-3" />
+            <Button variant="outline" size="sm" className="h-8 gap-2 border-white/10 bg-white/5 hover:bg-white/10 transition-colors rounded-full px-4">
+              <div className={`h-1.5 w-1.5 rounded-full ${currentDrone?.status === "online" ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-gray-500"}`} />
+              <span className="text-xs font-medium tracking-wide">{currentDrone?.name || "No Drone"}</span>
+              <ChevronDown className="h-3 w-3 text-muted-foreground opacity-50" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuLabel>Select Drone</DropdownMenuLabel>
+          <DropdownMenuContent align="center" className="w-56">
+            <DropdownMenuLabel className="text-xs text-muted-foreground">SELECT ACTIVE DRONE</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {drones.map((drone: Drone) => (
               <DropdownMenuItem
                 key={drone.id}
                 onClick={() => selectDrone(drone.id)}
-                className={selectedDrone === drone.id ? "bg-accent" : ""}
+                className="flex items-center justify-between"
               >
                 <div className="flex items-center gap-2">
-                  <div
-                    className={`h-2 w-2 rounded-full ${drone.status === "online" ? "bg-green-500" : "bg-gray-500"}`}
-                  />
-                  <span className="font-mono">{drone.name}</span>
+                  <div className={`h-2 w-2 rounded-full ${drone.status === "online" ? "bg-emerald-500" : "bg-zinc-500"}`} />
+                  <span className="font-mono text-xs">{drone.name}</span>
                 </div>
+                {selectedDrone === drone.id && <div className="h-1.5 w-1.5 rounded-full bg-primary" />}
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.push("/settings?tab=fleet")}>Manage Drones</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/settings?tab=fleet")} className="text-xs">Manage Fleet</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <div>
-            Mode: <span className="text-foreground">{currentDrone?.mode || "N/A"}</span>
+        {/* Quick Stats Pills */}
+        <div className="flex items-center gap-2 text-[10px] font-mono font-medium text-muted-foreground bg-white/5 rounded-full px-3 py-1 border border-white/5">
+          <div className="flex items-center gap-1.5 px-2 border-r border-white/5">
+            <span className={currentDrone?.battery > 20 ? "text-emerald-400" : "text-red-400"}>BAT {Math.round(currentDrone?.battery ?? 0)}%</span>
           </div>
-          <div className="hidden sm:flex items-center gap-2">
-            <span className="font-mono">Batt {Math.round(currentDrone?.battery ?? 0)}%</span>
-            <span className="font-mono">Sig {Math.round(currentDrone?.signal ?? 0)}%</span>
-            <span className="font-mono">
-              Alt {currentDrone?.location ? Math.round(currentDrone.location.altitude) : 0}m
-            </span>
+          <div className="flex items-center gap-1.5 px-2 border-r border-white/5">
+            <span>SIG {Math.round(currentDrone?.signal ?? 0)}%</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2">
+            <span>ALT {Math.round(currentDrone?.location?.altitude ?? 0)}m</span>
           </div>
         </div>
       </div>
 
+      {/* Right: Actions & User */}
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon">
-          <Bell className="h-4 w-4" />
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        >
-          {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-        </Button>
+        <div className="flex items-center gap-1 bg-white/5 rounded-full p-1 border border-white/5">
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground">
+            <Bell className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          >
+            {theme === "dark" ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
+          </Button>
+        </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <User className="h-4 w-4" />
+            <Button variant="ghost" className="h-8 w-8 rounded-full p-0 overflow-hidden border border-white/10 hover:border-white/20 transition-all">
+              <div className="h-full w-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-bold text-xs">
+                {user?.name?.[0] || "O"}
+              </div>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">{user?.name || "Operator"}</p>
-                <p className="text-xs text-muted-foreground">{user?.email || "operator@jawji.com"}</p>
-              </div>
-            </DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="flex flex-col space-y-1 p-2 border-b border-white/5 mb-1">
+              <p className="text-sm font-medium">{user?.name || "Operator"}</p>
+              <p className="text-xs text-muted-foreground">{user?.email || "operator@jawji.com"}</p>
+            </div>
+            <DropdownMenuItem onClick={() => router.push("/profile")}>
+              <User className="h-4 w-4 mr-2 text-muted-foreground" /> Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/settings")}>
+              <Monitor className="h-4 w-4 mr-2 text-muted-foreground" /> Settings
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.push("/settings?tab=profile")}>Profile</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push("/settings?tab=preferences")}>Preferences</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
-              <Power className="h-4 w-4 mr-2" />
-              Logout
+            <DropdownMenuItem className="text-red-400 focus:text-red-400 focus:bg-red-950/20" onClick={handleLogout}>
+              <Power className="h-4 w-4 mr-2" /> Logout
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </div>
+    </header>
   )
 }
