@@ -145,41 +145,105 @@ export function UnifiedDashboard() {
         {/* Right Column - Controls & Data (4 cols) */}
         <div className="lg:col-span-4 flex flex-col gap-4 min-h-0">
           {/* Telemetry Grid */}
-          <Card className="p-4 border-border shrink-0">
-            <h3 className="text-xs font-semibold font-mono text-primary mb-3">TELEMETRY</h3>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-4">
-              <div className="space-y-0.5">
-                <div className="text-[10px] text-muted-foreground">ALTITUDE (m)</div>
-                <div className="text-xl font-bold font-mono">{telemetry.altitude.toFixed(1)}</div>
+          <Card className="p-4 border-border shrink-0 bg-card/50 backdrop-blur-sm">
+            <h3 className="text-xs font-semibold font-mono text-primary mb-4 flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+              TELEMETRY DATA
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
+              {/* Altitude */}
+              <div className="bg-background/40 p-2.5 rounded border border-white/5 space-y-1">
+                <div className="text-[10px] text-muted-foreground font-medium tracking-wider">ALTITUDE</div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-bold font-mono tracking-tight">{telemetry.altitude.toFixed(1)}</span>
+                  <span className="text-xs text-muted-foreground font-mono">m</span>
+                </div>
               </div>
-              <div className="space-y-0.5">
-                <div className="text-[10px] text-muted-foreground">SPEED (m/s)</div>
-                <div className="text-xl font-bold font-mono">{telemetry.speed.toFixed(1)}</div>
+
+              {/* Ground Speed */}
+              <div className="bg-background/40 p-2.5 rounded border border-white/5 space-y-1">
+                <div className="text-[10px] text-muted-foreground font-medium tracking-wider">GROUND SPEED</div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-bold font-mono tracking-tight">{telemetry.speed.toFixed(1)}</span>
+                  <span className="text-xs text-muted-foreground font-mono">m/s</span>
+                </div>
               </div>
-              <div className="space-y-0.5">
-                <div className="text-[10px] text-muted-foreground">BATTERY</div>
-                <div className={`text-xl font-bold font-mono ${telemetry.battery < 20 ? 'text-red-500' : 'text-green-500'}`}>{telemetry.battery}%</div>
+
+              {/* Vertical Speed - SIMULATED for now */}
+              <div className="bg-background/40 p-2.5 rounded border border-white/5 space-y-1">
+                <div className="text-[10px] text-muted-foreground font-medium tracking-wider">VERT. SPEED</div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-bold font-mono tracking-tight text-emerald-400">+{0.5}</span>
+                  <span className="text-xs text-muted-foreground font-mono">m/s</span>
+                </div>
               </div>
-              <div className="space-y-0.5">
-                <div className="text-[10px] text-muted-foreground">SIGNAL</div>
-                <div className="text-xl font-bold font-mono">{telemetry.signal}%</div>
+
+              {/* Dist to Home - SIMULATED for now */}
+              <div className="bg-background/40 p-2.5 rounded border border-white/5 space-y-1">
+                <div className="text-[10px] text-muted-foreground font-medium tracking-wider">DIST. HOME</div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-bold font-mono tracking-tight">142</span>
+                  <span className="text-xs text-muted-foreground font-mono">m</span>
+                </div>
+              </div>
+
+              {/* Battery */}
+              <div className="bg-background/40 p-2.5 rounded border border-white/5 space-y-1">
+                <div className="text-[10px] text-muted-foreground font-medium tracking-wider">BATTERY</div>
+                <div className="flex items-baseline gap-1">
+                  <span className={`text-2xl font-bold font-mono tracking-tight ${telemetry.battery < 20 ? 'text-red-500' : 'text-emerald-500'}`}>{telemetry.battery}</span>
+                  <span className="text-xs text-muted-foreground font-mono">%</span>
+                </div>
+              </div>
+
+              {/* Signal */}
+              <div className="bg-background/40 p-2.5 rounded border border-white/5 space-y-1">
+                <div className="text-[10px] text-muted-foreground font-medium tracking-wider">LINK QUALITY</div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-bold font-mono tracking-tight">{telemetry.signal}</span>
+                  <span className="text-xs text-muted-foreground font-mono">%</span>
+                </div>
               </div>
             </div>
           </Card>
 
           {/* Artificial Horizon / Compass Combo */}
-          <Card className="p-4 border-border shrink-0 flex items-center justify-center min-h-[180px]">
-            <div className="relative w-40 h-40">
-              {/* Simple compass ring */}
-              <div className="absolute inset-0 border-2 border-muted rounded-full opacity-20"></div>
-              <div className="absolute inset-0 flex items-center justify-center font-mono text-2xl font-bold">
-                {telemetry.heading.toFixed(0)}°
+          <Card className="p-0 border-border shrink-0 flex items-center justify-center min-h-[180px] bg-black/20 overflow-hidden relative group">
+            {/* Dynamic background grid */}
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:20px_20px]" />
+
+            <div className="relative w-44 h-44 flex items-center justify-center">
+              {/* Compass Rose Ring - Rotates */}
+              <div className="absolute inset-0 rounded-full border-2 border-dashed border-white/10 transition-transform duration-500 ease-out will-change-transform"
+                style={{ transform: `rotate(${-telemetry.heading}deg)` }}>
+                {['N', 'E', 'S', 'W'].map((dir, i) => (
+                  <div key={dir} className="absolute font-bold text-xs text-muted-foreground"
+                    style={{
+                      top: i === 0 ? '4px' : i === 2 ? 'auto' : '50%',
+                      bottom: i === 2 ? '4px' : 'auto',
+                      left: i === 3 ? '8px' : i === 1 ? 'auto' : '50%',
+                      right: i === 1 ? '8px' : 'auto',
+                      transform: i % 2 === 0 ? 'translateX(-50%)' : 'translateY(-50%)'
+                    }}>
+                    {i === 0 ? <span className="text-red-500">N</span> : dir}
+                  </div>
+                ))}
               </div>
-              {/* Heading triangle */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1">
-                <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-l-transparent border-r-transparent border-b-primary" />
+
+              {/* Inner Heading Value */}
+              <div className="z-10 bg-background/80 backdrop-blur px-3 py-1 rounded border border-white/10 text-center">
+                <div className="text-2xl font-bold font-mono tracking-tighter tabular-nums leading-none">
+                  {telemetry.heading.toFixed(0).padStart(3, '0')}°
+                </div>
+                <div className="text-[9px] text-muted-foreground font-mono mt-1">HEADING</div>
               </div>
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground">HEADING</div>
+
+              {/* Fixed Indicator */}
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 text-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L22 22L12 18L2 22L12 2Z" />
+                </svg>
+              </div>
             </div>
           </Card>
 
