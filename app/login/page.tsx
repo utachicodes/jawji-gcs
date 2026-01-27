@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { Eye, EyeOff, Loader2, Github, Mail } from "lucide-react"
-import { signIn } from "next-auth/react"
+import { loginWithGoogle, loginWithGithub } from "@/lib/auth-service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -40,10 +40,12 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     try {
       setIsLoading(true)
-      await signIn("google", { callbackUrl: "/" })
+      await loginWithGoogle()
+      router.push("/")
     } catch (error) {
       console.error(error)
       alert("Failed to login with Google")
+    } finally {
       setIsLoading(false)
     }
   }
@@ -51,10 +53,12 @@ export default function LoginPage() {
   const handleGithubLogin = async () => {
     try {
       setIsLoading(true)
-      await signIn("github", { callbackUrl: "/" })
+      await loginWithGithub()
+      router.push("/")
     } catch (error) {
       console.error(error)
       alert("Failed to login with GitHub")
+    } finally {
       setIsLoading(false)
     }
   }
