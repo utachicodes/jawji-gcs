@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { Eye, EyeOff, Loader2, Github, Mail } from "lucide-react"
-import { loginWithGoogle, loginWithGithub } from "@/lib/auth-service"
+import { loginWithGoogle, loginWithGithub, registerWithEmail } from "@/lib/auth-service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -41,12 +41,8 @@ export default function SignupPage() {
 
     setIsLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    // Store auth token
-    localStorage.setItem("jawji_auth_token", "demo_token_" + Date.now())
-    localStorage.setItem("jawji_user", JSON.stringify({ email: formData.email, name: formData.name }))
+    // Register with Firebase
+    await registerWithEmail(formData.email, formData.password, formData.name)
 
     setIsLoading(false)
     router.push("/")
@@ -59,7 +55,11 @@ export default function SignupPage() {
       router.push("/")
     } catch (error: any) {
       console.error(error)
-      alert(error.message || "Failed to signup with Google")
+      console.error(error)
+      const message = error?.code?.includes("auth/popup-closed-by-user")
+        ? "Sign in cancelled"
+        : (error.message || "Failed to signup with Google")
+      alert(message)
     } finally {
       setIsLoading(false)
     }

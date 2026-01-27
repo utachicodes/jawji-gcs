@@ -2,7 +2,10 @@ import {
     signInWithPopup,
     signOut,
     onAuthStateChanged,
-    User
+    User,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    updateProfile
 } from "firebase/auth";
 import { auth, googleProvider, githubProvider } from "./firebase";
 import { useState, useEffect } from "react";
@@ -25,6 +28,29 @@ export const loginWithGithub = async () => {
         return result.user;
     } catch (error) {
         console.error("Error signing in with GitHub", error);
+        throw error;
+    }
+};
+
+// Sign in with Email/Password
+export const loginWithEmail = async (email: string, password: string) => {
+    try {
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        return result.user;
+    } catch (error) {
+        console.error("Error signing in with Email", error);
+        throw error;
+    }
+};
+
+// Register with Email/Password
+export const registerWithEmail = async (email: string, password: string, name: string) => {
+    try {
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(result.user, { displayName: name });
+        return result.user;
+    } catch (error) {
+        console.error("Error registering with Email", error);
         throw error;
     }
 };

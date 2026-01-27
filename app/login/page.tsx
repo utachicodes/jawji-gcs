@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { Eye, EyeOff, Loader2, Github, Mail } from "lucide-react"
-import { loginWithGoogle, loginWithGithub } from "@/lib/auth-service"
+import { loginWithGoogle, loginWithGithub, loginWithEmail } from "@/lib/auth-service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -26,15 +26,15 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    // Store auth token (in real app, this would come from backend)
-    localStorage.setItem("jawji_auth_token", "demo_token_" + Date.now())
-    localStorage.setItem("jawji_user", JSON.stringify({ email: formData.email, name: "Demo User" }))
-
-    setIsLoading(false)
-    router.push("/")
+    try {
+      await loginWithEmail(formData.email, formData.password)
+      router.push("/")
+    } catch (error: any) {
+      console.error(error)
+      alert("Invalid email or password")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleGoogleLogin = async () => {
