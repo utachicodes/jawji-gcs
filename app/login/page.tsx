@@ -24,14 +24,18 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log("JAWJI_LOGIN: Starting login attempt for:", formData.email);
     setIsLoading(true)
 
     try {
+      console.log("JAWJI_LOGIN: calling loginWithEmail...");
       await loginWithEmail(formData.email, formData.password)
+      console.log("JAWJI_LOGIN: Success! Redirecting...");
       router.push("/")
     } catch (error: any) {
-      console.error(error)
-      alert("Invalid email or password")
+      console.error("JAWJI_LOGIN_ERROR:", error)
+      const msg = error.code ? `Firebase Error (${error.code}): ${error.message}` : error.message;
+      alert("Login Failed: " + msg);
     } finally {
       setIsLoading(false)
     }

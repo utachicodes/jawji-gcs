@@ -19,4 +19,12 @@ const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 const githubProvider = new GithubAuthProvider();
 
+if (typeof window !== "undefined") {
+    console.log("Firebase Config Status:", {
+        apiKeyPresent: !!firebaseConfig.apiKey && firebaseConfig.apiKey !== "mock_key",
+        projectId: firebaseConfig.projectId,
+        authDomain: firebaseConfig.authDomain
+    });
+}
+
 export { app, auth, db, googleProvider, githubProvider };
