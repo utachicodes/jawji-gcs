@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { Eye, EyeOff, Loader2, Github, Mail } from "lucide-react"
-import { signIn } from "next-auth/react"
+import { loginWithGoogle, loginWithGithub } from "@/lib/auth-service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -37,6 +37,32 @@ export default function LoginPage() {
     router.push("/")
   }
 
+  const handleGoogleLogin = async () => {
+    try {
+      setIsLoading(true)
+      await loginWithGoogle()
+      router.push("/")
+    } catch (error) {
+      console.error(error)
+      alert("Failed to login with Google")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleGithubLogin = async () => {
+    try {
+      setIsLoading(true)
+      await loginWithGithub()
+      router.push("/")
+    } catch (error) {
+      console.error(error)
+      alert("Failed to login with GitHub")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-[radial-gradient(120%_60%_at_50%_0%,_hsl(var(--primary)/0.12),_transparent_60%)] bg-background">
       <div className="w-full max-w-2xl">
@@ -53,7 +79,8 @@ export default function LoginPage() {
             type="button"
             variant="outline"
             className="h-12 text-base bg-transparent"
-            onClick={() => signIn("google", { callbackUrl: "/" })}
+            onClick={handleGoogleLogin}
+            disabled={isLoading}
           >
             <Mail className="h-5 w-5 mr-2" /> Continue with Google
           </Button>
@@ -61,7 +88,8 @@ export default function LoginPage() {
             type="button"
             variant="outline"
             className="h-12 text-base bg-transparent"
-            onClick={() => signIn("github", { callbackUrl: "/" })}
+            onClick={handleGithubLogin}
+            disabled={isLoading}
           >
             <Github className="h-5 w-5 mr-2" /> Continue with GitHub
           </Button>
