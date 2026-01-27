@@ -57,9 +57,9 @@ export default function SignupPage() {
       setIsLoading(true)
       await loginWithGoogle()
       router.push("/")
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
-      alert("Failed to signup with Google")
+      alert(error.message || "Failed to signup with Google")
     } finally {
       setIsLoading(false)
     }
@@ -70,9 +70,9 @@ export default function SignupPage() {
       setIsLoading(true)
       await loginWithGithub()
       router.push("/")
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
-      alert("Failed to signup with GitHub")
+      alert(error.message || "Failed to signup with GitHub")
     } finally {
       setIsLoading(false)
     }

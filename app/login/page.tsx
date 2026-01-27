@@ -42,9 +42,9 @@ export default function LoginPage() {
       setIsLoading(true)
       await loginWithGoogle()
       router.push("/")
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
-      alert("Failed to login with Google")
+      alert(error.message || "Failed to login with Google")
     } finally {
       setIsLoading(false)
     }
@@ -55,9 +55,9 @@ export default function LoginPage() {
       setIsLoading(true)
       await loginWithGithub()
       router.push("/")
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
-      alert("Failed to login with GitHub")
+      alert(error.message || "Failed to login with GitHub")
     } finally {
       setIsLoading(false)
     }
