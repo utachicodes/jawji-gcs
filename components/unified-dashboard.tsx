@@ -11,6 +11,8 @@ import { useTelemetry, deriveTelemetry } from "@/lib/telemetry"
 import { WebRTCPlayer } from "@/components/webrtc-player"
 import { EmergencyAbort } from "@/components/emergency-abort"
 import { useMissionStore } from "@/lib/mission-store"
+import { MissionProgress } from "@/components/mission-progress"
+import { TelemetryCharts } from "@/components/telemetry-charts"
 import {
   AlertTriangle,
   Battery,
@@ -377,6 +379,21 @@ export function UnifiedDashboard() {
               </div>
             </div>
           </Card>
+
+          {/* Mission Progress */}
+          {activeMissionId && (
+            <MissionProgress />
+          )}
+
+          {/* Telemetry Charts */}
+          {activeDrone && (
+            <TelemetryCharts
+              altitude={telemetry.altitude ?? 0}
+              speed={telemetry.speed ?? 0}
+              battery={batteryLevel}
+              verticalSpeed={telemetry.verticalSpeed ?? 0}
+            />
+          )}
 
         </div>
       </div>

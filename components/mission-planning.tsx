@@ -131,13 +131,22 @@ export function MissionPlanning() {
       const L = (await import("leaflet")).default
       if (!mapRef.current || !markersLayerRef.current || !pathLayerRef.current) return
       markersLayerRef.current.clearLayers()
-      const latlngs: any[] = []
+      pathLayerRef.current.clearLayers()
+
+      const allLatLngs: any[] = []
+
+      // Render waypoints based on their path type
       waypoints.forEach((wp, idx) => {
+        // Create marker
         const marker = (L as any).marker([wp.lat, wp.lng], { draggable: true })
+        const popupContent = wp.pathType === "continuous"
+          ? `<b>Path Point ${idx + 1}</b><br/>Part of continuous trail`
+          : `<b>Waypoint ${idx + 1}</b><br/>Action: ${wp.action}`
+
         if (selectedWaypoint === wp.id) {
-          marker.bindPopup(`<b>Waypoint ${idx + 1}</b>`).openPopup()
+          marker.bindPopup(popupContent).openPopup()
         } else {
-          marker.bindPopup(`Waypoint ${idx + 1}`)
+          marker.bindPopup(popupContent)
         }
         marker.on("click", () => setSelectedWaypoint(wp.id))
         marker.on("dragend", (e: any) => {
@@ -145,11 +154,50 @@ export function MissionPlanning() {
           setWaypoints((prev) => prev.map((w) => (w.id === wp.id ? { ...w, lat, lng } : w)))
         })
         markersLayerRef.current.addLayer(marker)
-        latlngs.push([wp.lat, wp.lng])
+        allLatLngs.push([wp.lat, wp.lng])
       })
-      pathLayerRef.current.setLatLngs(latlngs)
-      if (latlngs.length > 0) {
-        const bounds = (L as any).latLngBounds(latlngs)
+
+      // Render paths differently based on type
+      if (waypoints.length > 1) {
+        const continuousPoints: any[] = []
+        const discretePoints: any[] = []
+
+        waypoints.forEach((wp, idx) => {
+          const point = [wp.lat, wp.lng]
+          if (wp.pathType === "continuous") {
+            continuousPoints.push(point)
+          } else {
+            discretePoints.push(point)
+          }
+        })
+
+        // Draw continuous path as smooth polyline (blue)
+        if (continuousPoints.length > 1) {
+          const continuousPath = (L as any).polyline(continuousPoints, {
+            color: "#3b82f6",
+            weight: 3,
+            opacity: 0.8,
+            smoothFactor: 1.5,
+          })
+          pathLayerRef.current.addLayer(continuousPath)
+        }
+
+        // Draw discrete waypoints as dashed line (orange)
+        if (discretePoints.length > 1 || (discretePoints.length > 0 && continuousPoints.length === 0)) {
+          // If mixed, connect all points; if only discrete, show them
+          const pointsToConnect = discretePoints.length === waypoints.length ? discretePoints : allLatLngs
+          const discretePath = (L as any).polyline(pointsToConnect, {
+            color: "#f97316",
+            weight: 2,
+            opacity: 0.6,
+            dashArray: "10, 10",
+          })
+          pathLayerRef.current.addLayer(discretePath)
+        }
+      }
+
+      if (allLatLngs.length > 0) {
+        const bounds = (L as any).latLngBounds(allLatLngs)
         if (bounds.isValid && bounds.isValid()) {
           mapRef.current.fitBounds(bounds, { padding: [20, 20], maxZoom: 16 })
         }
