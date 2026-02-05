@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Plus, Play, Save, Trash2, MapPin, Target } from "lucide-react"
+import { Plus, Play, Save, Trash2, MapPin, Target, Route, } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,8 +11,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useMissionStore } from "@/lib/mission-store"
+import { useMissionStore, type MissionType, type PathType, type PathPoint } from "@/lib/mission-store"
 import { MapGeofence } from "@/components/map-geofence"
+import { MISSION_TEMPLATES, getMissionTemplate } from "@/lib/mission-templates"
+import { KioskSelector } from "@/components/kiosk-selector"
+import { useKioskStore } from "@/lib/kiosk-store"
+import { Badge } from "@/components/ui/badge"
 
 interface Waypoint {
   id: string
@@ -21,6 +25,8 @@ interface Waypoint {
   altitude: number
   action: string
   speed?: number
+  pathType?: PathType
+  pathPoints?: PathPoint[]
 }
 
 export function MissionPlanning() {
@@ -34,9 +40,9 @@ export function MissionPlanning() {
   const addMission = useMissionStore((s) => s.addMission)
   const updateMission = useMissionStore((s) => s.updateMission)
   const [waypoints, setWaypoints] = useState<Waypoint[]>([
-    { id: "1", lat: 37.7749, lng: -122.4194, altitude: 50, action: "hover", speed: 5 },
-    { id: "2", lat: 37.7755, lng: -122.4185, altitude: 75, action: "capture", speed: 3 },
-    { id: "3", lat: 37.776, lng: -122.4175, altitude: 60, action: "scan", speed: 4 },
+    { id: "1", lat: 37.7749, lng: -122.4194, altitude: 50, action: "hover", speed: 5, pathType: "discrete" },
+    { id: "2", lat: 37.7755, lng: -122.4185, altitude: 75, action: "capture", speed: 3, pathType: "discrete" },
+    { id: "3", lat: 37.776, lng: -122.4175, altitude: 60, action: "scan", speed: 4, pathType: "discrete" },
   ])
   const [selectedWaypoint, setSelectedWaypoint] = useState<string | null>(null)
   const [mapCenter, setMapCenter] = useState<[number, number]>([37.7749, -122.4194])
@@ -44,6 +50,12 @@ export function MissionPlanning() {
   const [missionName, setMissionName] = useState("Survey Mission 01")
   const [editingId, setEditingId] = useState<string | null>(null)
   const [geofence, setGeofence] = useState<string>("")
+  const [missionType, setMissionType] = useState<MissionType>("custom")
+  const [pathMode, setPathMode] = useState<PathType>("discrete")
+  const [isDrawingPath, setIsDrawingPath] = useState(false)
+  const [selectedPickupKiosk, setSelectedPickupKiosk] = useState<string | undefined>()
+  const [selectedDropoffKiosk, setSelectedDropoffKiosk] = useState<string | undefined>()
+  const getKiosk = useKioskStore((s) => s.getKiosk)
 
   // Load mission if editing
   const missionIdParam = params.get("missionId") || null
@@ -110,7 +122,7 @@ export function MissionPlanning() {
     init()
     return () => {
       destroyed = true
-      try { mapRef.current && mapRef.current.remove() } catch {}
+      try { mapRef.current && mapRef.current.remove() } catch { }
     }
   }, [])
 
@@ -268,13 +280,30 @@ export function MissionPlanning() {
           </div>
 
           <Tabs defaultValue="mission" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="mission">Mission</TabsTrigger>
+              <TabsTrigger value="template">Template</TabsTrigger>
               <TabsTrigger value="waypoints">Waypoints</TabsTrigger>
               <TabsTrigger value="geofence">Geofence</TabsTrigger>
             </TabsList>
 
             <TabsContent value="mission" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>Mission Type</Label>
+                <Select value={missionType} onValueChange={(v) => setMissionType(v as MissionType)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(MISSION_TEMPLATES).map(([key, template]) => (
+                      <SelectItem key={key} value={key}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label>Mission Name</Label>
                 <Input placeholder="Enter mission name" value={missionName} onChange={(e) => setMissionName(e.target.value)} />
@@ -340,26 +369,147 @@ export function MissionPlanning() {
               </div>
             </TabsContent>
 
+            <TabsContent value="template" className="space-y-4 mt-4">
+              {missionType === "delivery" && (
+                <div className="space-y-4">
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-sm font-medium mb-1">Delivery Mission</p>
+                    <p className="text-xs text-muted-foreground">
+                      Configure pickup and drop-off locations, payload details, and delivery parameters.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Pickup Location</Label>
+                    <KioskSelector
+                      selectedKioskId={selectedPickupKiosk}
+                      onSelect={(kiosk) => {
+                        setSelectedPickupKiosk(kiosk.id)
+                        // Auto-add as waypoint
+                        const exists = waypoints.find(w => w.action === "pickup")
+                        if (!exists) {
+                          setWaypoints([...waypoints, {
+                            id: `pickup-${Date.now()}`,
+                            lat: kiosk.location.lat,
+                            lng: kiosk.location.lng,
+                            altitude: 50,
+                            action: "pickup",
+                            pathType: "discrete"
+                          }])
+                        }
+                      }}
+                      mode="pickup"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Drop-off Location</Label>
+                    <KioskSelector
+                      selectedKioskId={selectedDropoffKiosk}
+                      onSelect={(kiosk) => {
+                        setSelectedDropoffKiosk(kiosk.id)
+                        const exists = waypoints.find(w => w.action === "dropoff")
+                        if (!exists) {
+                          setWaypoints([...waypoints, {
+                            id: `dropoff-${Date.now()}`,
+                            lat: kiosk.location.lat,
+                            lng: kiosk.location.lng,
+                            altitude: 50,
+                            action: "dropoff",
+                            pathType: "discrete"
+                          }])
+                        }
+                      }}
+                      mode="dropoff"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {missionType === "survey" && (
+                <div className="space-y-4">
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-sm font-medium mb-1">Survey Mission</p>
+                    <p className="text-xs text-muted-foreground">
+                      Define coverage area, altitude, and scan pattern for aerial surveys.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Survey Altitude (m)</Label>
+                    <Input type="number" placeholder="50" defaultValue="50" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Overlap Percentage</Label>
+                    <Slider defaultValue={[70]} max={90} min={30} />
+                    <p className="text-xs text-muted-foreground text-center">70%</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Scan Pattern</Label>
+                    <Select defaultValue="grid">
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="grid">Grid</SelectItem>
+                        <SelectItem value="circular">Circular</SelectItem>
+                        <SelectItem value="custom">Custom</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {missionType === "custom" && (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  Custom mission - use the Waypoints tab to manually configure flight path
+                </div>
+              )}
+            </TabsContent>
+
             <TabsContent value="waypoints" className="space-y-3 mt-4">
               <div className="flex items-center justify-between">
                 <Label>Waypoints ({waypoints.length})</Label>
-                <Button size="sm" variant="outline" onClick={addWaypoint}>
-                  <Plus className="h-3 w-3 mr-1" />
-                  Add
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant={pathMode === "continuous" ? "default" : "outline"}
+                    onClick={() => {
+                      setPathMode(pathMode === "discrete" ? "continuous" : "discrete")
+                      setIsDrawingPath(pathMode === "discrete")
+                    }}
+                  >
+                    <Route className="h-3 w-3 mr-1" />
+                    {pathMode === "discrete" ? "Draw Path" : "Path Mode"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={addWaypoint}>
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add
+                  </Button>
+                </div>
               </div>
 
-              <p className="text-xs text-muted-foreground">
-                Click on the map to add waypoints or use the button above.
-              </p>
+              {pathMode === "discrete" ? (
+                <p className="text-xs text-muted-foreground">
+                  Click on the map to add discrete waypoints or use the button above.
+                </p>
+              ) : (
+                <div className="p-2 bg-primary/10 rounded border border-primary/20">
+                  <p className="text-xs font-medium text-primary">Path Drawing Mode Active</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Click on the map to add points along a continuous path. The drone will follow this trail.
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2 max-h-[500px] overflow-auto">
                 {waypoints.map((waypoint, index) => (
                   <Card
                     key={waypoint.id}
-                    className={`p-3 cursor-pointer transition-all ${
-                      selectedWaypoint === waypoint.id ? "ring-2 ring-primary" : ""
-                    }`}
+                    className={`p-3 cursor-pointer transition-all ${selectedWaypoint === waypoint.id ? "ring-2 ring-primary" : ""
+                      }`}
                     onClick={() => setSelectedWaypoint(waypoint.id)}
                   >
                     <div className="flex items-start justify-between mb-2">

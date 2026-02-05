@@ -9,6 +9,7 @@ import { VirtualJoystick } from "@/components/virtual-joystick"
 import { useDroneStore } from "@/lib/drone-store"
 import { useTelemetry, deriveTelemetry } from "@/lib/telemetry"
 import { WebRTCPlayer } from "@/components/webrtc-player"
+import { EmergencyAbort } from "@/components/emergency-abort"
 
 // Dynamically import map components to avoid SSR issues with Leaflet
 const MapView3D = dynamic(
@@ -29,7 +30,7 @@ export function UnifiedDashboard() {
   // Show live feed if we have a URL OR if the drone is active (simulated feed)
   const hasLiveFeed = !!activeDrone && (!!activeDrone.videoUrl || activeDrone.status === "online" || activeDrone.status === "flying")
   // Aerial drone footage for immersive view or use provided URL
-  const liveFeedUrl = activeDrone?.videoUrl || "https://videos.pexels.com/video-files/855564/855564-hd_1920_1080_30fps.mp4"
+  const liveFeedUrl = activeDrone?.videoUrl || "https://www.youtube.com/watch?v=LXb3EKWsInQ"
 
   const hasLocation = activeDrone?.location && activeDrone.location.lat !== 0
   const mapCenter: [number, number] = hasLocation
@@ -209,6 +210,9 @@ export function UnifiedDashboard() {
         </div>
 
       </div>
+
+      {/* Emergency Abort Button - Global Access */}
+      <EmergencyAbort />
     </div>
   )
 }

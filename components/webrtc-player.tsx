@@ -1,7 +1,10 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { AlertCircle } from "lucide-react"
+import dynamic from "next/dynamic"
+
+// Dynamically import ReactPlayer to avoid SSR issues
+const ReactPlayer = dynamic(() => import("react-player"), { ssr: false })
 
 interface WebRTCPlayerProps {
     url: string
@@ -18,64 +21,58 @@ export function WebRTCPlayer({
     muted = true,
     poster
 }: WebRTCPlayerProps) {
-    const videoRef = useRef<HTMLVideoElement>(null)
-    const [error, setError] = useState<string | null>(null)
-    const [status, setStatus] = useState<"connecting" | "connected" | "disconnected">("connecting")
-
-    // In a real implementation, this would connect to a signaling server
-    // and establish an RTCPeerConnection.
-    // For this simulation, we'll verify the URL and pass it through, 
-    // mimicking the connection state lifecycle.
+    const [mounted, setMounted] = useState(false)
 
     useEffect(() => {
-        setStatus("connecting")
-        // Simulate connection delay
-        const timer = setTimeout(() => {
-            setStatus("connected")
-        }, 1500)
+        setMounted(true)
+    }, [])
 
-        return () => clearTimeout(timer)
-    }, [url])
+    if (!mounted) {
+        return <div className={`bg-black ${className}`} />
+    }
 
+    // Check if it's a YouTube URL
+    const isYouTube = url.includes("youtube.com") || url.includes("youtu.be")
+
+    if (isYouTube) {
+        return (
+            <div className={`relative bg-black ${className} overflow-hidden pointer-events-auto`}>
+                <ReactPlayer
+                    url={url}
+                    width="100%"
+                    height="100%"
+                    playing={autoPlay}
+                    muted={muted}
+                    loop={true}
+                    controls={false}
+                    config={{
+                        youtube: {
+                            playerVars: { showinfo: 0, controls: 0, modestbranding: 1 }
+                        }
+                    }}
+                    style={{ position: 'absolute', top: 0, left: 0 }}
+                />
+                <div className="absolute top-2 left-2 z-20 flex gap-2 pointer-events-none">
+                    <div className="bg-red-600 text-white border border-white/10 px-2 py-1 rounded text-[10px] font-bold tracking-wider backdrop-blur-sm shadow-sm flex items-center gap-1">
+                        <span>LIVE</span>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    // Fallback for standard video files
     return (
         <div className={`relative bg-black ${className}`}>
-            {/* Placeholder for actual WebRTC Stream implementation */}
-            {/* In production, srcObject would be set from the RTCPeerConnection */}
-
             <video
-                ref={videoRef}
-                src={url} // Fallback for simulation
+                src={url}
                 className="w-full h-full object-cover"
                 autoPlay={autoPlay}
                 muted={muted}
                 playsInline
-                loop // Loop for simulation
+                loop
                 poster={poster}
             />
-
-            {status === "connecting" && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-10">
-                    <div className="flex flex-col items-center gap-2">
-                        <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                        <span className="text-xs font-mono text-white/80">ESTABLISHING WEBRTC LINK...</span>
-                    </div>
-                </div>
-            )}
-
-            {status === "disconnected" && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
-                    <div className="flex flex-col items-center gap-2 text-destructive">
-                        <AlertCircle className="w-8 h-8" />
-                        <span className="text-xs font-bold">SIGNAL LOST</span>
-                    </div>
-                </div>
-            )}
-
-            <div className="absolute top-2 left-2 z-20 flex gap-2">
-                <div className="bg-black/40 text-white/70 border border-white/10 px-2 py-1 rounded text-[10px] font-mono backdrop-blur-sm">
-                    WEBRTC
-                </div>
-            </div>
         </div>
     )
 }

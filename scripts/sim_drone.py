@@ -81,12 +81,63 @@ def main():
         
         topic = f"{TOPIC_PREFIX}/{args.id}/telemetry"
         
+        # Smooth flight parameters
+        radius = 0.002
+        center_lat = base_location["lat"]
+        center_lng = base_location["lng"]
+        angle = 0.0
+
         while True:
-            telemetry = generate_telemetry(args.id, start_time, base_location)
+            # Update physics
+            angle += 0.05  # Slower angular increment for smoother circle
+            
+            # Calculate new position
+            lat_offset = radius * math.sin(angle)
+            lng_offset = radius * math.cos(angle)
+            
+            current_lat = center_lat + lat_offset * 0.8  # Elliptical
+            current_lng = center_lng + lng_offset
+            
+            # Smooth altitude oscillation
+            elapsed = (datetime.now() - start_time).total_seconds()
+            altitude = 50 + math.sin(elapsed * 0.2) * 10
+            vertical_speed = 2.0 * math.cos(elapsed * 0.2)
+            
+            # Orientation calculations
+            yaw = (math.degrees(math.atan2(math.cos(angle), -math.sin(angle) * 0.8)) + 360) % 360
+            pitch = math.sin(elapsed * 0.5) * 2
+            roll = math.cos(elapsed * 0.3) * 2
+
+            telemetry = {
+                "id": args.id,
+                "location": {
+                    "lat": current_lat,
+                    "lng": current_lng,
+                    "altitude": altitude
+                },
+                "speed": 15.0 + math.sin(elapsed) * 0.5, # Less random noise
+                "verticalSpeed": vertical_speed,
+                "battery": max(0, 100 - (elapsed / 60)), # Slower drain
+                "signal": 95 + math.sin(elapsed * 10) * 2, # Signal oscillation
+                "heading": yaw,
+                "pitch": pitch,
+                "roll": roll,
+                "yaw": yaw,
+                "temperature": 25 + random.uniform(-0.1, 0.1),
+                "mode": "GPS-Denied" if (100 - (elapsed/60)) < 20 else "Auto",
+                "status": "flying",
+                "flightTime": elapsed,
+                "timestamp": time.time() * 1000,
+                "gpsSatellites": 12
+            }
+
             payload = json.dumps(telemetry)
             client.publish(topic, payload)
-            print(f"Published: Mode={telemetry['mode']} Alt={telemetry['location']['altitude']:.1f}m Bat={telemetry['battery']:.1f}% Sats={telemetry['gpsSatellites']}")
-            time.sleep(1) # 1Hz update rate
+            
+            if int(elapsed * 10) % 10 == 0: # Print once per second approx
+                print(f"Published: Mode={telemetry['mode']} Alt={telemetry['location']['altitude']:.1f}m Bat={telemetry['battery']:.1f}% Sats={telemetry['gpsSatellites']}")
+                
+            time.sleep(0.1) # 10Hz update rate
             
     except KeyboardInterrupt:
         print("\nStopping simulation...")
