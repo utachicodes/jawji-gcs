@@ -62,7 +62,7 @@ export function UnifiedDashboard() {
   }
 
   const isFlying = activeDrone?.status === "flying"
-  const isArmed = activeDrone?.armed
+  const isArmed = activeDrone?.mode?.toLowerCase().includes("armed") || isFlying
   const batteryLevel = telemetry.battery ?? 0
   const batteryStatus = batteryLevel < 20 ? "critical" : batteryLevel < 40 ? "warning" : "good"
 
@@ -75,8 +75,8 @@ export function UnifiedDashboard() {
           {/* Drone Status */}
           <div className="flex items-center gap-2">
             <div className={`h-2 w-2 rounded-full animate-pulse ${isFlying ? "bg-emerald-500" :
-                activeDrone?.status === "online" ? "bg-blue-500" :
-                  "bg-gray-500"
+              activeDrone?.status === "online" ? "bg-blue-500" :
+                "bg-gray-500"
               }`} />
             <span className="text-sm font-semibold">{activeDrone?.name || "No Drone Selected"}</span>
             <Badge variant={isFlying ? "default" : "secondary"} className="text-[10px] h-5">
@@ -116,8 +116,8 @@ export function UnifiedDashboard() {
           </div>
           <div className="flex items-center gap-2">
             <Battery className={`h-4 w-4 ${batteryStatus === "critical" ? "text-red-500" :
-                batteryStatus === "warning" ? "text-yellow-500" :
-                  "text-emerald-500"
+              batteryStatus === "warning" ? "text-yellow-500" :
+                "text-emerald-500"
               }`} />
             <span className={`text-sm font-mono font-bold ${batteryStatus === "critical" ? "text-red-500" : ""
               }`}>
@@ -152,8 +152,8 @@ export function UnifiedDashboard() {
               {/* Live indicator */}
               <div className="absolute top-4 left-4">
                 <div className={`flex items-center gap-2 px-3 py-1.5 rounded backdrop-blur-sm border ${hasLiveFeed
-                    ? "bg-red-500/20 border-red-500/30 text-red-500"
-                    : "bg-black/40 border-white/10 text-white/50"
+                  ? "bg-red-500/20 border-red-500/30 text-red-500"
+                  : "bg-black/40 border-white/10 text-white/50"
                   }`}>
                   <div className={`w-2 h-2 rounded-full ${hasLiveFeed ? "bg-red-500 animate-pulse" : "bg-white/30"}`} />
                   <span className="text-[10px] font-bold tracking-wider">LIVE</span>
@@ -337,7 +337,7 @@ export function UnifiedDashboard() {
               <div className="flex justify-between items-center">
                 <span className="text-[10px] text-muted-foreground">V. Speed</span>
                 <span className={`text-sm font-bold tabular-nums ${telemetry.verticalSpeed > 0.5 ? "text-emerald-500" :
-                    telemetry.verticalSpeed < -0.5 ? "text-orange-500" : ""
+                  telemetry.verticalSpeed < -0.5 ? "text-orange-500" : ""
                   }`}>
                   {activeDrone ? (telemetry.verticalSpeed > 0 ? "+" : "") + telemetry.verticalSpeed.toFixed(1) : "---"}
                 </span>
