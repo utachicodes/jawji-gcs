@@ -1,11 +1,12 @@
 import {
-    signInWithPopup,
+    signInWithRedirect,
     signOut,
     onAuthStateChanged,
     User,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
-    updateProfile
+    updateProfile,
+    sendPasswordResetEmail
 } from "firebase/auth";
 import { auth, googleProvider, githubProvider } from "./firebase";
 import { useState, useEffect } from "react";
@@ -13,8 +14,10 @@ import { useState, useEffect } from "react";
 // Sign in with Google
 export const loginWithGoogle = async () => {
     try {
-        const result = await signInWithPopup(auth, googleProvider);
-        return result.user;
+        await signInWithRedirect(auth, googleProvider);
+        // Note: Redirect flow does not return user immediately.
+        // The onAuthStateChanged listener will handle the state update.
+        return null;
     } catch (error) {
         console.error("Error signing in with Google", error);
         throw error;
@@ -24,8 +27,8 @@ export const loginWithGoogle = async () => {
 // Sign in with GitHub
 export const loginWithGithub = async () => {
     try {
-        const result = await signInWithPopup(auth, githubProvider);
-        return result.user;
+        await signInWithRedirect(auth, githubProvider);
+        return null;
     } catch (error) {
         console.error("Error signing in with GitHub", error);
         throw error;
@@ -51,6 +54,16 @@ export const registerWithEmail = async (email: string, password: string, name: s
         return result.user;
     } catch (error) {
         console.error("Error registering with Email", error);
+        throw error;
+    }
+};
+
+// Reset Password
+export const resetPassword = async (email: string) => {
+    try {
+        await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+        console.error("Error sending password reset email", error);
         throw error;
     }
 };
