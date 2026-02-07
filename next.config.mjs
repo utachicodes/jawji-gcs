@@ -4,10 +4,10 @@ import path from "node:path"
 const nextConfig = {
   outputFileTracingRoot: path.join(process.cwd()),
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   images: {
     unoptimized: true,

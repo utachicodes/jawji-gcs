@@ -212,9 +212,9 @@ function transformStreamerBatch(batch: StreamerBatch): any[] {
   return aggregateHasTelemetry ? [aggregate, ...items] : items.length > 0 ? items : [aggregate]
 }
 
-function extractEntryValue(entry: StreamerBatch["data"][number]["data"]) {
+function extractEntryValue(entry: any) {
   if (entry && typeof entry === "object" && "data" in entry) {
-    return (entry as { data?: unknown }).data
+    return ((entry as any) as { data?: unknown }).data as any
   }
   return entry
 }

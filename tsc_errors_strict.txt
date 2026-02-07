@@ -1,0 +1,11 @@
+﻿app/api/ingest/route.ts(215,57): error TS2537: Type '{ topic: string; timestamp?: string | undefined; data?: unknown; }[] | undefined' has no matching index signature for type 'number'.
+components/ui/chart.tsx(109,3): error TS2339: Property 'payload' does not exist on type 'Omit<Props<ValueType, NameType>, PropertiesReadFromContext> & { active?: boolean | undefined; allowEscapeViewBox?: AllowInDimension | undefined; ... 24 more ...; wrapperStyle?: CSSProperties | undefined; } & ClassAttributes<...> & HTMLAttributes<...> & { ...; }'.
+components/ui/chart.tsx(114,3): error TS2339: Property 'label' does not exist on type 'Omit<Props<ValueType, NameType>, PropertiesReadFromContext> & { active?: boolean | undefined; allowEscapeViewBox?: AllowInDimension | undefined; ... 24 more ...; wrapperStyle?: CSSProperties | undefined; } & ClassAttributes<...> & HTMLAttributes<...> & { ...; }'.
+components/ui/chart.tsx(182,23): error TS7006: Parameter 'item' implicitly has an 'any' type.
+components/ui/chart.tsx(182,29): error TS7006: Parameter 'index' implicitly has an 'any' type.
+components/ui/chart.tsx(260,39): error TS2344: Type '"payload" | "verticalAlign"' does not satisfy the constraint '"string" | "filter" | "fill" | "values" | "end" | "type" | "version" | "style" | "id" | "name" | "nonce" | "key" | "mode" | "path" | "speed" | "origin" | "role" | "in" | "width" | ... 430 more ... | "portal"'.
+  Type '"payload"' is not assignable to type '"string" | "filter" | "fill" | "values" | "end" | "type" | "version" | "style" | "id" | "name" | "nonce" | "key" | "mode" | "path" | "speed" | "origin" | "role" | "in" | "width" | ... 430 more ... | "portal"'.
+components/ui/chart.tsx(266,17): error TS2339: Property 'length' does not exist on type '{}'.
+components/ui/chart.tsx(278,16): error TS2339: Property 'map' does not exist on type '{}'.
+components/ui/chart.tsx(278,21): error TS7006: Parameter 'item' implicitly has an 'any' type.
+lib/socket-client.ts(3,16): error TS2307: Cannot find module 'socket.io-client' or its corresponding type declarations.

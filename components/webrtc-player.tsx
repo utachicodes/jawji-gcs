@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 
 // Dynamically import ReactPlayer to avoid SSR issues
-const ReactPlayer = dynamic(() => import("react-player"), { ssr: false })
+const ReactPlayer = dynamic(() => import("react-player"), { ssr: false }) as any
 
 interface WebRTCPlayerProps {
     url: string
@@ -49,7 +49,7 @@ export function WebRTCPlayer({
                         youtube: {
                             playerVars: { showinfo: 0, controls: 0, modestbranding: 1 }
                         }
-                    }}
+                    } as any}
                     style={{ position: 'absolute', top: 0, left: 0 }}
                 />
                 <div className="absolute top-2 left-2 z-20 flex gap-2 pointer-events-none">
