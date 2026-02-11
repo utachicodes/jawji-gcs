@@ -11,7 +11,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "sonner"
 import { TelemetryBootstrap } from "@/components/telemetry-bootstrap"
 import { PwaBootstrap } from "@/components/pwa-bootstrap"
-import { AuthSessionProvider } from "@/components/auth-session-provider"
+import { AuthWrapper } from "@/components/auth-wrapper"
 
 export const metadata: Metadata = {
   title: "JAWJI Ground Control Station",
@@ -38,8 +38,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className="dark">
       <body className={`min-h-screen bg-background text-foreground antialiased font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <AuthSessionProvider>
-          <ThemeProvider defaultTheme="dark" storageKey="jawji-theme">
+        <ThemeProvider defaultTheme="dark" storageKey="jawji-theme">
+          <AuthWrapper>
             <Suspense fallback={null}>
               {children}
               <Analytics />
@@ -47,9 +47,9 @@ export default function RootLayout({
             </Suspense>
             <TelemetryBootstrap />
             <PwaBootstrap />
-          </ThemeProvider>
-        </AuthSessionProvider>
-     </body>
+          </AuthWrapper>
+        </ThemeProvider>
+      </body>
     </html>
   )
 }

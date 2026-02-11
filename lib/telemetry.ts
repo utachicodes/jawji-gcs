@@ -18,6 +18,18 @@ export type Telemetry = {
   homeLocation?: { lat: number; lng: number; altitude: number }
   verticalSpeed: number
   distance: number
+  voltage: number
+  current: number
+  hdop: number
+  humidity: number
+  windSpeed: number
+  windDir: number
+  motors: {
+    m1: number
+    m2: number
+    m3: number
+    m4: number
+  }
 }
 
 const EMPTY_TELEMETRY: Telemetry = {
@@ -37,6 +49,18 @@ const EMPTY_TELEMETRY: Telemetry = {
   gpsSatellites: 0,
   verticalSpeed: 0,
   distance: 0,
+  voltage: 0,
+  current: 0,
+  hdop: 0,
+  humidity: 0,
+  windSpeed: 0,
+  windDir: 0,
+  motors: {
+    m1: 0,
+    m2: 0,
+    m3: 0,
+    m4: 0,
+  }
 }
 
 export function deriveTelemetry(drone?: Drone | null): Telemetry {
@@ -71,6 +95,13 @@ export function deriveTelemetry(drone?: Drone | null): Telemetry {
     distance: drone.homeLocation && drone.location
       ? calculateDistance(drone.homeLocation.lat, drone.homeLocation.lng, drone.location.lat, drone.location.lng)
       : 0,
+    voltage: drone.voltage ?? 0,
+    current: drone.current ?? 0,
+    hdop: drone.hdop ?? 0,
+    humidity: drone.humidity ?? 0,
+    windSpeed: drone.windSpeed ?? 0,
+    windDir: drone.windDir ?? 0,
+    motors: drone.motors ?? { m1: 0, m2: 0, m3: 0, m4: 0 },
   }
 }
 

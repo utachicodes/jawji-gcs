@@ -128,7 +128,19 @@ def main():
                 "status": "flying",
                 "flightTime": elapsed,
                 "timestamp": time.time() * 1000,
-                "gpsSatellites": 12
+                "gpsSatellites": 12,
+                "voltage": 22.4 + math.sin(elapsed * 0.1) * 0.2, # 6S battery approx
+                "current": 12.3 + random.uniform(-0.5, 0.5) if altitude > 10 else 2.0,
+                "hdop": 0.8 + random.uniform(-0.1, 0.1),
+                "humidity": 65 + math.sin(elapsed * 0.05) * 5,
+                "windSpeed": 8.5 + math.sin(elapsed * 0.1) * 2,
+                "windDir": (245 + math.sin(elapsed * 0.02) * 20) % 360,
+                "motors": {
+                    "m1": 68 + math.sin(elapsed) * 5,
+                    "m2": 73 + math.cos(elapsed) * 5,
+                    "m3": 65 + math.sin(elapsed * 1.1) * 5,
+                    "m4": 74 + math.cos(elapsed * 1.2) * 5
+                }
             }
 
             payload = json.dumps(telemetry)

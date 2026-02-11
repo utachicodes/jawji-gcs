@@ -15,6 +15,12 @@ export interface Drone {
   mode: string
   battery: number
   signal: number
+  voltage?: number
+  current?: number
+  hdop?: number
+  humidity?: number
+  windSpeed?: number
+  windDir?: number
   location?: DroneLocation
   speed?: number
   verticalSpeed?: number
@@ -29,6 +35,12 @@ export interface Drone {
   gpsSatellites?: number
   homeLocation?: DroneLocation
   flightPath?: DroneLocation[]
+  motors?: {
+    m1: number
+    m2: number
+    m3: number
+    m4: number
+  }
   lastSeen: string
 }
 

@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useSession, signOut } from "next-auth/react"
+import { useFirebaseAuth, logout } from "@/lib/auth-service"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -25,22 +25,19 @@ export function StatusBar() {
   const { toggleSidebar } = useSidebar()
   const { theme, setTheme } = useTheme()
   const { drones, selectedDrone, selectDrone } = useDroneStore()
-  const { data: session } = useSession()
+  const { user: firebaseUser } = useFirebaseAuth()
   const [user, setUser] = useState<{ name: string; email: string } | null>(null)
 
   // Simulated time for the header clock
   const [time, setTime] = useState<string>("")
 
   useEffect(() => {
-    if (session?.user) {
-      let name = session.user.name || "Operator"
-      if (name === "Operator" && session.user.email) {
-        name = session.user.email.split("@")[0]
+    if (firebaseUser) {
+      let name = firebaseUser.displayName || "Operator"
+      if (name === "Operator" && firebaseUser.email) {
+        name = firebaseUser.email.split("@")[0]
       }
-      setUser({ name, email: session.user.email || "operator@jawji.com" })
-    } else {
-      const userData = typeof window !== "undefined" ? localStorage.getItem("jawji_user") : null
-      if (userData) setUser(JSON.parse(userData))
+      setUser({ name, email: firebaseUser.email || "operator@jawji.com" })
     }
 
     const interval = setInterval(() => {
@@ -48,16 +45,14 @@ export function StatusBar() {
       setTime(now.toLocaleTimeString('en-US', { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }))
     }, 1000)
     return () => clearInterval(interval)
-  }, [session])
+  }, [firebaseUser])
 
-  const handleLogout = () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("jawji_auth_token")
-      localStorage.removeItem("jawji_user")
-    }
+  const handleLogout = async () => {
     try {
-      signOut({ callbackUrl: "/login" })
-    } catch {
+      await logout()
+      router.push("/login")
+    } catch (err) {
+      console.error("Logout failed", err)
       router.push("/login")
     }
   }
