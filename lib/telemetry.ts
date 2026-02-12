@@ -30,6 +30,7 @@ export type Telemetry = {
     m3: number
     m4: number
   }
+  timeToEmpty: number // in minutes
 }
 
 const EMPTY_TELEMETRY: Telemetry = {
@@ -60,7 +61,8 @@ const EMPTY_TELEMETRY: Telemetry = {
     m2: 0,
     m3: 0,
     m4: 0,
-  }
+  },
+  timeToEmpty: 0
 }
 
 export function deriveTelemetry(drone?: Drone | null): Telemetry {
@@ -102,6 +104,9 @@ export function deriveTelemetry(drone?: Drone | null): Telemetry {
     windSpeed: drone.windSpeed ?? 0,
     windDir: drone.windDir ?? 0,
     motors: drone.motors ?? { m1: 0, m2: 0, m3: 0, m4: 0 },
+    timeToEmpty: (drone.current ?? 0) > 0
+      ? Math.max(0, (drone.battery / ((drone.current ?? 0) * 0.5 + 2)) * 15)
+      : (drone.battery / 100) * 25 // Fallback to 25 mins max
   }
 }
 

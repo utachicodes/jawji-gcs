@@ -7,7 +7,9 @@ import dynamic from "next/dynamic"
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false }) as any
 
 interface WebRTCPlayerProps {
-    url: string
+    url?: string
+    streamUrl?: string
+    droneId?: string
     className?: string
     autoPlay?: boolean
     muted?: boolean
@@ -16,12 +18,15 @@ interface WebRTCPlayerProps {
 
 export function WebRTCPlayer({
     url,
+    streamUrl,
+    droneId,
     className,
     autoPlay = true,
     muted = true,
     poster
 }: WebRTCPlayerProps) {
     const [mounted, setMounted] = useState(false)
+    const effectiveUrl = url || streamUrl || ""
 
     useEffect(() => {
         setMounted(true)
@@ -31,7 +36,15 @@ export function WebRTCPlayer({
         return <div className={`bg-black ${className}`} />
     }
 
-    const isYouTube = url.includes("youtube.com") || url.includes("youtu.be")
+    if (!effectiveUrl) {
+        return (
+            <div className={`bg-black flex items-center justify-center text-muted-foreground text-xs ${className}`}>
+                NO VIDEO FEED
+            </div>
+        )
+    }
+
+    const isYouTube = effectiveUrl.includes("youtube.com") || effectiveUrl.includes("youtu.be")
 
     // Check if it's a YouTube URL
     // const isYouTube = url.includes("youtube.com") || url.includes("youtu.be") - Removed duplicate
@@ -40,7 +53,7 @@ export function WebRTCPlayer({
         return (
             <div className={`relative bg-black ${className} overflow-hidden pointer-events-auto group`}>
                 <ReactPlayer
-                    url={url}
+                    url={effectiveUrl}
                     width="100%"
                     height="100%"
                     playing={autoPlay}
@@ -94,7 +107,7 @@ export function WebRTCPlayer({
     return (
         <div className={`relative bg-black ${className} overflow-hidden group`}>
             <video
-                src={url}
+                src={effectiveUrl}
                 className="w-full h-full object-cover"
                 autoPlay={autoPlay}
                 muted={muted}

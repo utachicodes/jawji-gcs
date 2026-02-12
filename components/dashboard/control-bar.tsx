@@ -3,19 +3,19 @@
 import React from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Plane, Home, Navigation, AlertCircle, Camera, Target, Users, RotateCcw } from "lucide-react"
+import { Plane, Home, Navigation, AlertCircle, Camera, Target, Users, RotateCcw, ChevronDown } from "lucide-react"
 import { EmergencyAbort } from "@/components/emergency-abort"
 
-export function ControlBar() {
+export function ControlBar({ className }: { className?: string }) {
     return (
-        <div className="grid grid-cols-12 gap-4 shrink-0">
+        <div className={`grid grid-cols-12 gap-4 shrink-0 ${className}`}>
 
             {/* Primary Actions */}
             <div className="col-span-8 grid grid-cols-4 gap-4">
                 <ActionButton
                     label="Takeoff"
                     sub="Auto ascend to 5m"
-                    icon={<Plane className="h-5 w-5" />}
+                    icon={<Navigation className="h-5 w-5" />}
                     variant="orange"
                 />
                 <ActionButton
@@ -27,7 +27,7 @@ export function ControlBar() {
                 <ActionButton
                     label="Land"
                     sub="Controlled descent"
-                    icon={<Navigation className="h-5 w-5" />}
+                    icon={<Target className="h-5 w-5" />}
                     variant="green"
                 />
                 <div className="col-span-1 flex gap-4 h-full">
@@ -36,8 +36,8 @@ export function ControlBar() {
             </div>
 
             {/* Secondary Status / Toggles */}
-            <Card className="col-span-4 glass-panel bg-muted/20 border-border/40 grid grid-cols-4 gap-2 p-2">
-                <StatusToggle label="Start Rec" icon={<Camera />} />
+            <Card className="col-span-12 lg:col-span-4 bg-muted/20 dark:bg-black/40 border-border/40 grid grid-cols-4 gap-2 p-2 shadow-inner glass-panel rounded-xl">
+                <StatusToggle label="Record" icon={<Camera />} />
                 <StatusToggle label="Gimbal" icon={<Target />} />
                 <StatusToggle label="Follow" icon={<Users />} />
                 <StatusToggle label="Orbit" icon={<RotateCcw />} />
@@ -48,20 +48,20 @@ export function ControlBar() {
 
 function ActionButton({ label, sub, icon, variant }: { label: string, sub: string, icon: React.ReactNode, variant: 'orange' | 'teal' | 'green' | 'red' }) {
     const styles = {
-        orange: "bg-orange-500 hover:bg-orange-600 text-black shadow-[0_0_20px_rgba(249,115,22,0.4)]",
-        teal: "bg-teal-500/20 hover:bg-teal-500/30 text-teal-400 border border-teal-500/50",
-        green: "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/50",
-        red: "bg-red-500 hover:bg-red-600 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)]",
+        orange: "bg-[#f59e0b] hover:bg-[#d97706] text-black shadow-[0_0_20px_rgba(245,158,11,0.2)]",
+        teal: "bg-teal-500 hover:bg-teal-600 text-black shadow-[0_0_20px_rgba(20,184,166,0.2)]",
+        green: "bg-emerald-500 hover:bg-emerald-600 text-black shadow-[0_0_20px_rgba(16,185,129,0.2)]",
+        red: "bg-red-600 hover:bg-red-700 text-white shadow-[0_0_20px_rgba(220,38,38,0.3)] animate-pulse",
     }
 
     return (
-        <Button variant="ghost" className={`h-16 rounded-xl flex items-center justify-start gap-4 px-4 transition-all duration-200 active:scale-95 ${styles[variant]}`}>
-            <div className={`${variant === 'orange' || variant === 'red' ? 'bg-black/20' : 'bg-current opacity-20'} p-2 rounded-lg`}>
-                {icon}
+        <Button variant="ghost" className={`h-full min-h-[64px] rounded-xl flex items-center justify-start gap-4 px-4 transition-all duration-200 active:scale-95 ${styles[variant]}`}>
+            <div className={`bg-black/10 p-2 rounded-lg border border-black/10 shadow-inner`}>
+                {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: "h-5 w-5" })}
             </div>
             <div className="text-left flex flex-col">
-                <span className="text-sm font-black uppercase tracking-widest">{label}</span>
-                <span className="text-[10px] opacity-70 font-bold">{sub}</span>
+                <span className="text-xs font-black uppercase tracking-[0.2em]">{label}</span>
+                <span className="text-[9px] opacity-70 font-bold uppercase tracking-widest">{sub}</span>
             </div>
         </Button>
     )
@@ -69,8 +69,8 @@ function ActionButton({ label, sub, icon, variant }: { label: string, sub: strin
 
 function StatusToggle({ label, icon }: { label: string, icon: React.ReactElement }) {
     return (
-        <Button variant="ghost" className="h-full flex flex-col items-center justify-center gap-1 hover:bg-white/5 group border border-transparent hover:border-white/10 rounded-lg">
-            {React.cloneElement(icon, { className: "h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" })}
+        <Button variant="ghost" className="h-full flex flex-col items-center justify-center gap-1 hover:bg-accent group border border-transparent hover:border-border/40 rounded-lg transition-all">
+            {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: "h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" })}
             <span className="text-[8px] font-bold text-muted-foreground uppercase opacity-70 group-hover:opacity-100">{label}</span>
         </Button>
     )

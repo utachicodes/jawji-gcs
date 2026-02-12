@@ -40,20 +40,20 @@ export function UnifiedDashboard() {
     : []
 
   return (
-    <div className="h-screen w-full bg-black text-white p-4 flex flex-col gap-4 overflow-hidden select-none">
+    <div className="h-screen w-full bg-background text-foreground p-3 flex flex-col gap-3 overflow-hidden select-none relative">
       {/* Background Grid Pattern */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[linear-gradient(var(--border)_1px,transparent_1px),linear-gradient(90deg,var(--border)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none opacity-20 dark:opacity-10" />
 
       {/* Main Tactical Grid */}
-      <div className="flex-1 grid grid-cols-12 gap-4 min-h-0 relative z-10">
+      <div className="flex-1 grid grid-cols-12 gap-3 min-h-0 relative z-10 overflow-hidden">
 
         {/* Left: System Diagnostics */}
-        <div className="col-span-12 lg:col-span-3 min-h-0">
+        <div className="col-span-12 lg:col-span-2 h-full overflow-hidden">
           <SystemDiagnostics telemetry={telemetry} />
         </div>
 
         {/* Center: HUD & Video */}
-        <div className="col-span-12 lg:col-span-6 min-h-0">
+        <div className="col-span-12 lg:col-span-7 h-full overflow-hidden flex flex-col border border-border/40 rounded-xl bg-black/20">
           <TacticalHUD telemetry={telemetry}>
             <WebRTCPlayer
               streamUrl={activeDrone?.videoUrl || ""}
@@ -63,11 +63,12 @@ export function UnifiedDashboard() {
         </div>
 
         {/* Right: Tactical View (Map + Metrics) */}
-        <div className="col-span-12 lg:col-span-3 min-h-0">
+        <div className="col-span-12 lg:col-span-3 h-full overflow-hidden flex flex-col">
           <TacticalView
             telemetry={telemetry}
             mapMode={mapMode}
             onToggleMapMode={() => setMapMode(mapMode === "2D" ? "3D" : "2D")}
+            className="rounded-xl"
             mapElement={
               mapMode === "2D" ? (
                 <MapView
@@ -82,6 +83,7 @@ export function UnifiedDashboard() {
                   center={mapCenter}
                   altitude={activeDrone?.location?.altitude || 100}
                   heading={activeDrone?.heading || 0}
+                  waypoints={currentWaypoints}
                 />
               )
             }
@@ -91,8 +93,8 @@ export function UnifiedDashboard() {
       </div>
 
       {/* Bottom: Control Interface */}
-      <div className="h-24 z-10">
-        <ControlBar />
+      <div className="h-28 shrink-0 z-10">
+        <ControlBar className="rounded-xl" />
       </div>
 
     </div>

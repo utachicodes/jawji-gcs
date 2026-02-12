@@ -12,7 +12,17 @@ interface Waypoint {
   speed?: number
 }
 
-export function MapView3D({ waypoints }: { waypoints: Waypoint[] }) {
+export function MapView3D({
+  waypoints = [],
+  center,
+  altitude,
+  heading
+}: {
+  waypoints?: Waypoint[],
+  center?: [number, number],
+  altitude?: number,
+  heading?: number
+}) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   const bounds = useMemo(() => {
@@ -54,7 +64,7 @@ export function MapView3D({ waypoints }: { waypoints: Waypoint[] }) {
   }
 
   return (
-    <div ref={containerRef} className="relative w-full h-full rounded-lg overflow-hidden bg-gradient-to-b from-background to-muted">
+    <div ref={containerRef} className="relative w-full h-full rounded-xl overflow-hidden bg-gradient-to-b from-background to-muted shadow-inner">
       <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
         <defs>
           <linearGradient id="pathGrad" x1="0" y1="0" x2="0" y2="1">
@@ -93,7 +103,6 @@ export function MapView3D({ waypoints }: { waypoints: Waypoint[] }) {
           )
         })}
       </svg>
-      <div className="absolute bottom-2 right-2 text-[10px] text-muted-foreground bg-card/80 px-2 py-1 rounded z-10">3D View</div>
     </div>
   )
 }
