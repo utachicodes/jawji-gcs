@@ -86,15 +86,15 @@ export function UnifiedDashboard() {
       <div className="absolute inset-0 bg-[linear-gradient(var(--border)_1px,transparent_1px),linear-gradient(90deg,var(--border)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none opacity-20 dark:opacity-10" />
 
       {/* Main Tactical Grid */}
-      <div className="flex-1 grid grid-cols-12 grid-rows-12 gap-3 min-h-0 relative z-10 overflow-hidden">
+      <div className="flex-1 grid grid-cols-12 gap-3 min-h-0 relative z-10 overflow-hidden">
 
         {/* Left: System Diagnostics */}
-        <div className="col-span-12 row-span-4 lg:col-span-2 lg:row-span-12 h-full overflow-hidden">
+        <div className="col-span-12 lg:col-span-3 h-full overflow-hidden">
           <SystemDiagnostics telemetry={telemetry} />
         </div>
 
         {/* Center: HUD & Video */}
-        <div className="col-span-12 row-span-8 lg:col-span-6 lg:row-span-12 h-full overflow-hidden flex flex-col border border-border/40 rounded-xl bg-black/20">
+        <div className="col-span-12 lg:col-span-5 h-full overflow-hidden flex flex-col border border-border/40 rounded-xl bg-black/20">
           <TacticalHUD telemetry={telemetry} connectionState={connectionState}>
             <WebRTCPlayer
               streamUrl={activeDrone?.videoUrl || ""}
@@ -106,7 +106,7 @@ export function UnifiedDashboard() {
         </div>
 
         {/* Right: Tactical View (Map + Metrics) */}
-        <div className="col-span-12 row-span-4 lg:col-span-4 lg:row-span-12 h-full overflow-hidden flex flex-col">
+        <div className="col-span-12 lg:col-span-4 h-full overflow-hidden flex flex-col">
           <TacticalView
             mapMode={mapMode}
             onToggleMapMode={() => setMapMode(mapMode === "2D" ? "3D" : "2D")}
