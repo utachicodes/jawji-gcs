@@ -77,9 +77,9 @@ export function ControlBar({ className }: { className?: string }) {
           <Button
             variant="ghost"
             onClick={() => setAbortOpen(true)}
-            className="h-full min-h-0 rounded-md px-4 flex flex-col items-start justify-center border-2 border-red-500/80 bg-red-600/15 hover:bg-red-600/25 text-foreground active:translate-y-px"
+            className="h-full min-h-0 rounded-md px-4 flex flex-col items-start justify-center border-2 border-destructive/80 bg-destructive/15 hover:bg-destructive/25 text-foreground active:translate-y-px"
           >
-            <span className="text-[11px] font-black uppercase tracking-[0.25em] text-red-700 dark:text-red-200">ABORT</span>
+            <span className="text-[11px] font-black uppercase tracking-[0.25em] text-destructive">ABORT</span>
             <span className="text-[10px] font-mono font-bold text-muted-foreground tracking-tight">
               {activeMissionId ? "MISSION ACTIVE" : "EMERGENCY STOP"}
             </span>

@@ -20,7 +20,7 @@ export function TacticalHUD({ telemetry, children, connectionState = "connected"
     }
 
     return (
-        <div className="relative h-full w-full bg-black overflow-hidden rounded-xl border border-border/60 font-mono">
+        <div className="relative h-full w-full bg-background overflow-hidden rounded-xl border border-border/60 font-mono">
             {/* Underlying Video/Content */}
             <div className="absolute inset-0 z-0">
                 {children}
