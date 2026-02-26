@@ -83,15 +83,39 @@ export function WebRTCPlayer({
     }, [mounted, effectiveUrl, fallbackToDeviceCamera, connectionState])
 
     if (!mounted) {
-        return <div className={`bg-black ${className}`} />
+        return <div className={`bg-zinc-950 ${className}`} />
     }
 
     if (!effectiveUrl) {
         if (connectionState === "disconnected") {
             return (
-                <div className={`bg-black ${className} flex items-center justify-center`}>
-                    <div className="px-3 py-2 border border-red-500/60 bg-red-600/20 text-red-200 text-[11px] font-mono font-bold tracking-widest">
-                        LINK LOST
+                <div className={`bg-zinc-950 ${className} flex items-center justify-center relative overflow-hidden`}>
+                    {/* Subtle grid pattern */}
+                    <div
+                        className="absolute inset-0 opacity-[0.04]"
+                        style={{
+                            backgroundImage: "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
+                            backgroundSize: "32px 32px",
+                        }}
+                    />
+                    {/* Center content */}
+                    <div className="relative z-10 flex flex-col items-center gap-4 select-none">
+                        {/* Drone silhouette */}
+                        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" className="opacity-20">
+                            <circle cx="14" cy="14" r="7" stroke="white" strokeWidth="1.5" />
+                            <circle cx="50" cy="14" r="7" stroke="white" strokeWidth="1.5" />
+                            <circle cx="14" cy="50" r="7" stroke="white" strokeWidth="1.5" />
+                            <circle cx="50" cy="50" r="7" stroke="white" strokeWidth="1.5" />
+                            <line x1="19" y1="19" x2="28" y2="28" stroke="white" strokeWidth="1.5" />
+                            <line x1="45" y1="19" x2="36" y2="28" stroke="white" strokeWidth="1.5" />
+                            <line x1="19" y1="45" x2="28" y2="36" stroke="white" strokeWidth="1.5" />
+                            <line x1="45" y1="45" x2="36" y2="36" stroke="white" strokeWidth="1.5" />
+                            <rect x="26" y="26" width="12" height="12" rx="2" stroke="white" strokeWidth="1.5" />
+                        </svg>
+                        <div className="flex flex-col items-center gap-1.5">
+                            <span className="text-[11px] font-black font-mono tracking-[0.3em] text-white/20 uppercase">No Video Signal</span>
+                            <span className="text-[9px] font-mono text-white/10 tracking-widest uppercase">Connect a drone to view feed</span>
+                        </div>
                     </div>
                 </div>
             )
@@ -99,14 +123,14 @@ export function WebRTCPlayer({
 
         if (!fallbackToDeviceCamera) {
             return (
-                <div className={`bg-black flex items-center justify-center text-muted-foreground text-xs ${className}`}>
+                <div className={`bg-zinc-950 flex items-center justify-center text-muted-foreground text-xs ${className}`}>
                     NO VIDEO SOURCE
                 </div>
             )
         }
 
         return (
-            <div className={`relative bg-black ${className} overflow-hidden`}>
+            <div className={`relative bg-zinc-950 ${className} overflow-hidden`}>
                 <video
                     ref={localVideoRef}
                     className="w-full h-full object-cover"
@@ -131,12 +155,9 @@ export function WebRTCPlayer({
 
     const isYouTube = effectiveUrl.includes("youtube.com") || effectiveUrl.includes("youtu.be")
 
-    // Check if it's a YouTube URL
-    // const isYouTube = url.includes("youtube.com") || url.includes("youtu.be") - Removed duplicate
-
     if (isYouTube) {
         return (
-            <div className={`relative bg-black ${className} overflow-hidden pointer-events-auto group`}>
+            <div className={`relative bg-zinc-950 ${className} overflow-hidden pointer-events-auto group`}>
                 <ReactPlayer
                     url={effectiveUrl}
                     width="100%"
@@ -158,7 +179,7 @@ export function WebRTCPlayer({
 
     // Fallback for standard video files
     return (
-        <div className={`relative bg-black ${className} overflow-hidden group`}>
+        <div className={`relative bg-zinc-950 ${className} overflow-hidden group`}>
             <video
                 src={effectiveUrl}
                 className="w-full h-full object-cover"
