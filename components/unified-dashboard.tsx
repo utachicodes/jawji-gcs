@@ -94,7 +94,7 @@ export function UnifiedDashboard() {
         </div>
 
         {/* Center: HUD & Video */}
-        <div className="col-span-12 lg:col-span-5 h-full overflow-hidden flex flex-col border border-border/40 rounded-xl bg-black/20">
+        <div className="col-span-12 lg:col-span-5 h-full overflow-hidden flex flex-col border border-border/40 rounded-xl bg-foreground/[0.03]">
           <TacticalHUD telemetry={telemetry} connectionState={connectionState}>
             <WebRTCPlayer
               streamUrl={activeDrone?.videoUrl || ""}

@@ -74,8 +74,8 @@ export function AppSidebar() {
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground group-data-[collapsible=icon]:hidden">LINK</span>
             <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-green-500 font-semibold group-data-[collapsible=icon]:hidden">ACTIVE</span>
+              <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="text-primary font-semibold group-data-[collapsible=icon]:hidden">ACTIVE</span>
             </div>
           </div>
           {activeDrone && (
@@ -83,18 +83,18 @@ export function AppSidebar() {
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground group-data-[collapsible=icon]:hidden">PWR</span>
                 <div className="flex-1 mx-2 h-1.5 rounded bg-muted/60 overflow-hidden group-data-[collapsible=icon]:hidden">
-                  <div className="h-full bg-green-500" style={{ width: `${Math.round(Math.max(0, Math.min(100, activeDrone.battery)))}%` }} />
+                  <div className="h-full bg-primary" style={{ width: `${Math.round(Math.max(0, Math.min(100, activeDrone.battery)))}%` }} />
                 </div>
                 <span className="text-foreground font-semibold group-data-[collapsible=icon]:hidden min-w-[2.5rem] text-right">{Math.round(activeDrone.battery)}%</span>
-                <div className="hidden group-data-[collapsible=icon]:block h-1.5 w-1.5 rounded-full bg-green-500" />
+                <div className="hidden group-data-[collapsible=icon]:block h-1.5 w-1.5 rounded-full bg-primary" />
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground group-data-[collapsible=icon]:hidden">SIG</span>
                 <div className="flex-1 mx-2 h-1.5 rounded bg-muted/60 overflow-hidden group-data-[collapsible=icon]:hidden">
-                  <div className="h-full bg-green-500" style={{ width: `${Math.round(Math.max(0, Math.min(100, activeDrone.signal)))}%` }} />
+                  <div className="h-full bg-primary" style={{ width: `${Math.round(Math.max(0, Math.min(100, activeDrone.signal)))}%` }} />
                 </div>
                 <span className="text-foreground font-semibold group-data-[collapsible=icon]:hidden min-w-[2.5rem] text-right">{Math.round(activeDrone.signal)}%</span>
-                <div className="hidden group-data-[collapsible=icon]:block h-1.5 w-1.5 rounded-full bg-green-500" />
+                <div className="hidden group-data-[collapsible=icon]:block h-1.5 w-1.5 rounded-full bg-primary" />
               </div>
             </>
           )}
