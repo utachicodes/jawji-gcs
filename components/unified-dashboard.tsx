@@ -108,7 +108,6 @@ export function UnifiedDashboard() {
         {/* Right: Tactical View (Map + Metrics) */}
         <div className="col-span-12 row-span-4 lg:col-span-4 lg:row-span-12 h-full overflow-hidden flex flex-col">
           <TacticalView
-            telemetry={telemetry}
             mapMode={mapMode}
             onToggleMapMode={() => setMapMode(mapMode === "2D" ? "3D" : "2D")}
             className="rounded-xl"
