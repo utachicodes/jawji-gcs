@@ -1,5 +1,6 @@
 "use client"
 
+import type { ReactNode } from "react"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
@@ -8,25 +9,25 @@ import { Zap, Navigation, Wind, Activity, Thermometer } from "lucide-react"
 import { TelemetryCharts } from "@/components/telemetry-charts"
 import { WindVector } from "./wind-vector"
 
-function MetricRow({ label, value, color = "text-emerald-400" }: { label: string, value: string | number, color?: string }) {
+function MetricRow({ label, value, color = "text-primary" }: { label: string, value: string | number, color?: string }) {
     return (
-        <div className="flex justify-between items-center py-1.5 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors px-1">
-            <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">{label}</span>
+        <div className="flex justify-between items-center py-1.5 border-b border-border/10 last:border-0 hover:bg-muted/10 transition-colors px-1">
+            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">{label}</span>
             <span className={`text-[10px] font-black font-mono tracking-tight ${color}`}>{value}</span>
         </div>
     )
 }
 
-function DiagSection({ icon, value, unit, status, color = "text-primary" }: { icon: React.ReactNode, value: string, unit: string, status: string, color?: string }) {
+function DiagSection({ icon, value, unit, status, color = "text-primary" }: { icon: ReactNode, value: string, unit: string, status: string, color?: string }) {
     return (
-        <div className="bg-black/20 p-4 rounded-xl border border-white/10 flex flex-col gap-3 group hover:border-white/20 transition-all">
+        <div className="bg-background/20 p-4 rounded-xl border border-border/20 flex flex-col gap-3 group hover:border-border/40 transition-all">
             <div className="flex items-center justify-between">
-                <div className="p-2 bg-white/5 rounded-lg text-white/60 group-hover:text-primary transition-colors">
+                <div className="p-2 bg-muted/20 rounded-lg text-muted-foreground group-hover:text-primary transition-colors">
                     {icon}
                 </div>
                 <div className="flex flex-col items-end">
-                    <span className="text-[6px] font-black tracking-[0.3em] text-white/30 uppercase mb-0.5">Status</span>
-                    <span className="text-[8px] font-black tracking-widest text-emerald-400 uppercase">{status}</span>
+                    <span className="text-[6px] font-black tracking-[0.3em] text-muted-foreground/60 uppercase mb-0.5">Status</span>
+                    <span className="text-[8px] font-black tracking-widest text-primary uppercase">{status}</span>
                 </div>
             </div>
             <div className="flex items-baseline gap-1.5 mt-1">
@@ -55,18 +56,18 @@ export function SystemDiagnostics({ telemetry }: { telemetry: Telemetry }) {
                     {/* Power System */}
                     <section className="space-y-4">
                         <div className="flex justify-between items-center px-1">
-                            <div className="flex items-center gap-2 text-[8px] font-black text-white/60 uppercase tracking-[0.2em]">
+                            <div className="flex items-center gap-2 text-[8px] font-black text-muted-foreground uppercase tracking-[0.2em]">
                                 <Zap className="h-3 w-3 text-primary" />
                                 Power System
                             </div>
-                            <span className={`text-[10px] font-black font-mono ${telemetry.battery < 20 ? "text-red-500 animate-pulse" : "text-primary"}`}>
+                            <span className={`text-[10px] font-black font-mono ${telemetry.battery < 20 ? "text-destructive animate-pulse" : "text-primary"}`}>
                                 {telemetry.battery.toFixed(0)}%
                             </span>
                         </div>
                         <div className="space-y-1">
-                            <Progress value={telemetry.battery} className="h-1 bg-white/5" color={telemetry.battery < 20 ? "rgb(239 68 68)" : "rgb(var(--primary))"} />
+                            <Progress value={telemetry.battery} className="h-1 bg-white/5" color={telemetry.battery < 20 ? "hsl(var(--destructive))" : "hsl(var(--primary))"} />
                             <div className="grid grid-cols-1 pt-2">
-                                <MetricRow label="Time to Empty" value={`~${telemetry.timeToEmpty.toFixed(0)} MIN`} color={telemetry.timeToEmpty < 5 ? "text-red-500" : "text-emerald-400"} />
+                                <MetricRow label="Time to Empty" value={`~${telemetry.timeToEmpty.toFixed(0)} MIN`} color={telemetry.timeToEmpty < 5 ? "text-destructive" : "text-primary"} />
                                 <MetricRow label="Battery Voltage" value={`${telemetry.voltage.toFixed(2)}V`} />
                                 <MetricRow label="Current Draw" value={`${telemetry.current.toFixed(1)}A`} />
                             </div>
@@ -75,20 +76,20 @@ export function SystemDiagnostics({ telemetry }: { telemetry: Telemetry }) {
 
                     {/* Navigation */}
                     <section className="space-y-4 pt-4 border-t border-white/10">
-                        <div className="flex items-center gap-2 text-[8px] font-black text-white/60 uppercase tracking-[0.2em] px-1">
+                        <div className="flex items-center gap-2 text-[8px] font-black text-muted-foreground uppercase tracking-[0.2em] px-1">
                             <Navigation className="h-3 w-3 text-primary" />
                             Global Position
                         </div>
                         <div className="grid grid-cols-1">
                             <MetricRow label="Latitude" value={`${telemetry.latitude.toFixed(6)}°`} />
                             <MetricRow label="Longitude" value={`${telemetry.longitude.toFixed(6)}°`} />
-                            <MetricRow label="GPS Accuracy (HDOP)" value={telemetry.hdop.toFixed(2)} color={telemetry.hdop < 2 ? "text-emerald-400" : "text-orange-400"} />
+                            <MetricRow label="GPS Accuracy (HDOP)" value={telemetry.hdop.toFixed(2)} color={telemetry.hdop < 2 ? "text-primary" : "text-amber-500"} />
                         </div>
                     </section>
 
                     <section className="space-y-4 pt-4 border-t border-white/10">
                         <div className="flex items-center justify-between px-1">
-                            <div className="flex items-center gap-2 text-[8px] font-black text-white/60 uppercase tracking-[0.2em]">
+                            <div className="flex items-center gap-2 text-[8px] font-black text-muted-foreground uppercase tracking-[0.2em]">
                                 <Wind className="h-3 w-3 text-primary" />
                                 Atmospherics
                             </div>
@@ -105,29 +106,29 @@ export function SystemDiagnostics({ telemetry }: { telemetry: Telemetry }) {
                     {/* Motor Status */}
                     <section className="space-y-4 pt-4 border-t border-white/10">
                         <div className="flex items-center justify-between px-1">
-                            <div className="flex items-center gap-2 text-[8px] font-black text-white/60 uppercase tracking-[0.2em]">
+                            <div className="flex items-center gap-2 text-[8px] font-black text-muted-foreground uppercase tracking-[0.2em]">
                                 <Activity className="h-3 w-3 text-primary" />
                                 Motor Status
                             </div>
-                            <span className="text-[8px] font-bold text-emerald-500/60 uppercase">M1-M4</span>
+                            <span className="text-[8px] font-bold text-muted-foreground uppercase">M1-M4</span>
                         </div>
                         <div className="grid grid-cols-4 gap-2 h-32 items-end px-1">
                             {Object.entries(telemetry.motors).map(([key, val]) => (
                                 <div key={key} className="flex flex-col gap-2 items-center h-full group">
-                                    <div className="w-full bg-black/40 rounded-sm overflow-hidden flex-1 flex flex-col justify-end border border-white/5 relative">
+                                    <div className="w-full bg-muted/20 rounded-sm overflow-hidden flex-1 flex flex-col justify-end border border-border/10 relative">
                                         {/* Inner Grid Pattern */}
                                         <div className="absolute inset-0 opacity-10"
                                             style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.2) 1px, transparent 1px)', backgroundSize: '4px 4px' }}
                                         />
                                         <div
-                                            className="w-full bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-all duration-500 ease-out group-hover:brightness-110 relative z-10"
+                                            className="w-full bg-primary shadow-[0_0_12px_hsl(var(--primary)/0.35)] transition-all duration-500 ease-out group-hover:brightness-110 relative z-10"
                                             style={{ height: `${val}%` }}
                                         >
                                             {/* Glow overlay */}
                                             <div className="absolute inset-x-0 top-0 h-px bg-white/40 shadow-[0_0_10px_white]" />
                                         </div>
                                     </div>
-                                    <span className="text-[8px] font-black text-white/30 uppercase tracking-tighter">{key}</span>
+                                    <span className="text-[8px] font-black text-muted-foreground/60 uppercase tracking-tighter">{key}</span>
                                 </div>
                             ))}
                         </div>

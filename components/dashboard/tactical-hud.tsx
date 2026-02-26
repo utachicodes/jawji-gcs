@@ -15,7 +15,7 @@ export function TacticalHUD({ telemetry, children, connectionState = "connected"
 
     const statusStyles: Record<NonNullable<TacticalHUDProps["connectionState"]>, { label: string; cls: string }> = {
         connected: { label: "CONNECTED", cls: "bg-primary text-primary-foreground border-primary" },
-        warning: { label: "WARNING", cls: "bg-amber-500 text-black border-amber-500" },
+        warning: { label: "WARNING", cls: "bg-amber-500 text-foreground border-amber-500" },
         disconnected: { label: "DISCONNECTED", cls: "bg-destructive text-destructive-foreground border-destructive" },
     }
 
