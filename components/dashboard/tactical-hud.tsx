@@ -1,11 +1,12 @@
 "use client"
 
+import type { ReactNode } from "react"
 import type { Telemetry } from "@/lib/telemetry"
 import { AlertTriangle } from "lucide-react"
 
 interface TacticalHUDProps {
     telemetry: Telemetry
-    children?: React.ReactNode
+    children?: ReactNode
     connectionState?: "connected" | "warning" | "disconnected"
 }
 
@@ -13,9 +14,9 @@ export function TacticalHUD({ telemetry, children, connectionState = "connected"
     const isCriticalBattery = telemetry.battery < 20
 
     const statusStyles: Record<NonNullable<TacticalHUDProps["connectionState"]>, { label: string; cls: string }> = {
-        connected: { label: "CONNECTED", cls: "bg-emerald-500 text-black border-emerald-500" },
+        connected: { label: "CONNECTED", cls: "bg-primary text-primary-foreground border-primary" },
         warning: { label: "WARNING", cls: "bg-amber-500 text-black border-amber-500" },
-        disconnected: { label: "DISCONNECTED", cls: "bg-red-600 text-white border-red-500" },
+        disconnected: { label: "DISCONNECTED", cls: "bg-destructive text-destructive-foreground border-destructive" },
     }
 
     return (
@@ -34,7 +35,7 @@ export function TacticalHUD({ telemetry, children, connectionState = "connected"
                         <div className={`h-7 px-2.5 flex items-center border text-[11px] font-black tracking-widest ${statusStyles[connectionState].cls}`}>
                             {statusStyles[connectionState].label}
                         </div>
-                        <div className="h-7 px-2.5 flex items-center border border-white/15 bg-black/55 text-white text-[11px] font-black tracking-widest">
+                        <div className="h-7 px-2.5 flex items-center border border-border/40 bg-background/60 text-foreground text-[11px] font-black tracking-widest">
                             {telemetry.flightMode}
                         </div>
                     </div>
@@ -62,13 +63,13 @@ export function TacticalHUD({ telemetry, children, connectionState = "connected"
             {/* Critical Overlay */}
             {isCriticalBattery && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
-                    <div className="absolute inset-0 bg-red-600/15" />
-                    <div className="px-4 py-3 border-2 border-red-500 bg-black/70 text-red-200">
+                    <div className="absolute inset-0 bg-destructive/15" />
+                    <div className="px-4 py-3 border-2 border-destructive bg-background/80 text-destructive-foreground">
                         <div className="flex items-center gap-2">
                             <AlertTriangle className="h-4 w-4" />
                             <span className="text-[12px] font-black tracking-widest">CRITICAL BATTERY</span>
                         </div>
-                        <div className="mt-1 text-[11px] font-mono font-bold tracking-tight text-white/80">
+                        <div className="mt-1 text-[11px] font-mono font-bold tracking-tight text-muted-foreground">
                             {telemetry.battery.toFixed(0)}% • ~{telemetry.timeToEmpty.toFixed(0)} MIN
                         </div>
                     </div>
@@ -89,14 +90,14 @@ function HudCell({
 }) {
     const cls =
         state === "red"
-            ? "border-red-500/70 text-red-100"
+            ? "border-destructive/70 text-destructive"
             : state === "amber"
-                ? "border-amber-500/70 text-amber-100"
-                : "border-white/15 text-white"
+                ? "border-amber-500/70 text-amber-400"
+                : "border-border/40 text-foreground"
 
     return (
-        <div className={`h-10 px-2 flex flex-col justify-center border bg-black/55 ${cls}`}>
-            <div className="text-[9px] font-black tracking-widest text-white/60">{label}</div>
+        <div className={`h-10 px-2 flex flex-col justify-center border bg-background/60 ${cls}`}>
+            <div className="text-[9px] font-black tracking-widest text-muted-foreground">{label}</div>
             <div className="text-[12px] font-black tracking-tight">{value}</div>
         </div>
     )
