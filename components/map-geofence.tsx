@@ -1,5 +1,7 @@
 "use client"
 
+import "leaflet/dist/leaflet.css"
+import "leaflet-draw/dist/leaflet.draw.css"
 import { useEffect, useRef, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"

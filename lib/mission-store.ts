@@ -5,6 +5,17 @@ export type MissionStatus = "draft" | "ready" | "completed" | "active" | "aborte
 export type MissionType = "delivery" | "survey" | "inspection" | "custom"
 export type PathType = "discrete" | "continuous"
 
+export type MissionPackage =
+  | "obstacle_avoidance"
+  | "crop_detection"
+  | "drone_detection"
+  | "thermal_imaging"
+  | "photogrammetry"
+  | "payload_release"
+  | "rtk_precision"
+  | "live_streaming"
+  | "ai_tracking"
+
 // Path point for continuous trail following
 export interface PathPoint {
   lat: number
@@ -89,6 +100,8 @@ export interface Mission {
   startTime?: string
   riskAssessment?: string
   checklist?: string[]
+  // Mission capability packages
+  packages?: MissionPackage[]
   // Full mission path
   waypointData?: Waypoint[]
 }

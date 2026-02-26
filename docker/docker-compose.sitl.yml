@@ -1,0 +1,13 @@
+services:
+  ardupilot-sitl:
+    image: radarku/ardupilot-sitl:copter-4.4
+    ports:
+      - "14550:14550/udp"   # MAVLink UDP for MAVLink bridge
+      - "5760:5760/tcp"     # MAVLink TCP for MAVProxy / QGroundControl
+    environment:
+      - VEHICLE=ArduCopter
+      - FRAME=quad
+    command: >
+      sim_vehicle.py -v ArduCopter -f quad --no-rebuild
+      --out=udp:0.0.0.0:14550
+      --speedup=1

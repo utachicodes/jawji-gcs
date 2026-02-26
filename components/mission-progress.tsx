@@ -15,13 +15,7 @@ export function MissionProgress() {
     const drone = drones.find(d => d.id === selectedDrone)
 
     if (!mission || !drone || !drone.location) {
-        return (
-            <Card className="p-4">
-                <div className="text-center text-sm text-muted-foreground">
-                    No active mission
-                </div>
-            </Card>
-        )
+        return null
     }
 
     // Calculate mission progress

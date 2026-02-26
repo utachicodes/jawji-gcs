@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import "leaflet/dist/leaflet.css"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Layers } from "lucide-react"
 import {
@@ -32,9 +33,9 @@ interface MapViewProps {
 }
 
 export function MapView({
-  waypoints,
-  selectedWaypoint,
-  onWaypointClick,
+  waypoints = [],
+  selectedWaypoint = null,
+  onWaypointClick = () => { },
   onMapClick,
   center = [37.7749, -122.4194],
   zoom = 13,
@@ -48,6 +49,25 @@ export function MapView({
   const tileLayerRef = useRef<any>(null)
   const [activeLayer, setActiveLayer] = useState<"vector" | "dark" | "satellite">("vector")
   const [isMapReady, setIsMapReady] = useState(false)
+
+  const themePreferredLayer = useMemo<"vector" | "dark">(() => {
+    if (typeof document === "undefined") return "vector"
+    return document.documentElement.classList.contains("dark") ? "dark" : "vector"
+  }, [])
+
+  useEffect(() => {
+    setActiveLayer((prev) => (prev === "satellite" ? prev : themePreferredLayer))
+  }, [themePreferredLayer])
+
+  useEffect(() => {
+    if (typeof document === "undefined") return
+    const observer = new MutationObserver(() => {
+      const next = document.documentElement.classList.contains("dark") ? "dark" : "vector"
+      setActiveLayer((prev) => (prev === "satellite" ? prev : next))
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     let destroyed = false
@@ -170,7 +190,7 @@ export function MapView({
       if (homePosition && homePosition.lat && homePosition.lng) {
         const homeIcon = L.divIcon({
           className: 'bg-transparent',
-          html: `<div class="flex items-center justify-center w-6 h-6 rounded bg-blue-500 border-2 border-white shadow-md text-white font-bold text-[10px]">H</div>`,
+          html: `<div style="width:22px;height:22px;border:2px solid rgba(255,255,255,.35);background:rgba(0,0,0,.65);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">H</div>`,
           iconSize: [24, 24],
           iconAnchor: [12, 12]
         });
@@ -186,13 +206,21 @@ export function MapView({
         const divIcon = L.divIcon({
           className: 'bg-transparent',
           html: isCurrent
-            ? `<div class="relative flex items-center justify-center w-10 h-10">
-                     <div class="absolute w-full h-full bg-primary/30 rounded-full animate-ping"></div>
-                     <div class="relative w-8 h-8 bg-primary rounded-full border-2 border-white flex items-center justify-center shadow-lg" style="transform: rotate(${heading || 0}deg)">
-                        <div class="w-0 h-0 border-l-4 border-r-4 border-b-8 border-l-transparent border-r-transparent border-b-white"></div>
-                     </div>
-                   </div>`
-            : `<div class="flex items-center justify-center w-8 h-8 rounded-full ${isSelected ? 'bg-primary ring-2 ring-white scale-110' : 'bg-primary/80'} text-white font-bold shadow-md text-xs">
+            ? (() => {
+              const alt = Number.isFinite(wp.altitude) ? wp.altitude : 0
+              const h = (heading || 0) % 360
+              return `
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                  <div style="width:22px;height:22px;border:2px solid rgba(255,255,255,.35);background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;transform:rotate(${h}deg);">
+                    <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:10px solid rgba(255,255,255,.9);"></div>
+                  </div>
+                  <div style="padding:1px 4px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.65);color:rgba(255,255,255,.9);font-size:9px;font-weight:800;letter-spacing:.08em;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">
+                    ${alt.toFixed(0)}m
+                  </div>
+                </div>
+              `
+            })()
+            : `<div style="width:20px;height:20px;border:2px solid rgba(255,255,255,.35);background:${isSelected ? 'rgba(245,158,11,.95)' : 'rgba(0,0,0,.65)'};color:${isSelected ? '#000' : 'rgba(255,255,255,.95)'};display:flex;align-items:center;justify-content:center;font-weight:900;font-size:10px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">
                      ${idx + 1}
                    </div>`,
           iconSize: [40, 40],
@@ -216,7 +244,7 @@ export function MapView({
       <div className="absolute top-4 left-4 z-[400]">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="secondary" size="icon" className="h-8 w-8 bg-card/90 backdrop-blur border shadow-md">
+            <Button variant="secondary" size="icon" className="h-8 w-8 bg-card/95 border border-border/70">
               <Layers className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>

@@ -1,162 +1,457 @@
+#!/usr/bin/env python3
+"""
+JAWJI GCS – Multi-Drone Telemetry Simulator
+Simulates N drones with realistic physics, battery model, wind drift,
+GPS-denied mode, and MQTT command subscriber.
+
+Usage:
+    python sim_drone.py --count 2 --broker localhost --port 1883
+    python sim_drone.py --config config.yaml
+"""
+
 import argparse
-import time
 import json
-import random
+import logging
 import math
-import paho.mqtt.client as mqtt
+import random
+import signal
+import sys
+import threading
+import time
 from datetime import datetime
+from typing import Optional
 
-# Default configuration
-BROKER = "localhost"
-PORT = 1883
+try:
+    import yaml
+    YAML_AVAILABLE = True
+except ImportError:
+    YAML_AVAILABLE = False
+
+import paho.mqtt.client as mqtt
+
+# ── Logging setup ─────────────────────────────────────────────────────────────
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s – %(message)s",
+    datefmt="%H:%M:%S",
+)
+
+# ── Constants ─────────────────────────────────────────────────────────────────
+
+DEFAULT_BROKER = "localhost"
+DEFAULT_PORT = 1883
 TOPIC_PREFIX = "drone"
+UPDATE_HZ = 10               # telemetry publish rate
+UPDATE_INTERVAL = 1.0 / UPDATE_HZ
+DEADZONE_SAT_THRESHOLD = 6   # satellites below which GPS considered degraded
 
-def generate_telemetry(drone_id, start_time, base_location):
-    elapsed = (datetime.now() - start_time).total_seconds()
-    
-    # Circular flight path simulation
-    radius = 0.001  # approx 100m
-    speed = 0.1     # angular speed
-    
-    lat_offset = radius * math.sin(elapsed * speed)
-    lng_offset = radius * math.cos(elapsed * speed)
-    
-    current_lat = base_location["lat"] + lat_offset
-    current_lng = base_location["lng"] + lng_offset
-    
-    # Simulate battery drain (1% every 30 seconds approx)
-    battery = max(0, 100 - (elapsed / 30))
-    
-    # Altitude variation
-    altitude = 50 + math.sin(elapsed * 0.5) * 5
-    # Vertical speed
-    vertical_speed = 2.5 * math.cos(elapsed * 0.5)
+# Battery model constants
+HOVER_POWER_W = 400          # watts at hover
+MAX_SPEED_MS = 20.0
+BATTERY_CAPACITY_WH = 220    # watt-hours (6S 22Ah approx)
 
-    # Orientation
-    pitch = math.sin(elapsed * 0.2) * 5
-    roll = math.cos(elapsed * 0.3) * 5
-    yaw = (elapsed * speed * 180 / math.pi) % 360
+# Physics
+WIND_DRIFT_COEFF = 0.00003   # position drift per m/s wind per second
+ACCEL_TIME = 2.0             # seconds to reach cruise speed
 
-    data = {
-        "id": drone_id,
-        "location": {
-            "lat": current_lat,
-            "lng": current_lng,
-            "altitude": altitude
-        },
-        "speed": 15.0 + random.uniform(-1, 1),
-        "verticalSpeed": vertical_speed,  # Note: camelCase to match TypeScript expectations if needed, or mapping in backend
-        "battery": battery,
-        "signal": 90 + random.uniform(-5, 5),
-        "heading": yaw,
-        "pitch": pitch,
-        "roll": roll,
-        "yaw": yaw,
-        "temperature": 25 + random.uniform(-2, 2),
-        "mode": "GPS-Denied" if battery < 20 else "Auto",
-        "status": "flying" if battery > 10 else "landed",
-        "flightTime": elapsed,
-        "timestamp": time.time() * 1000,
-        "gpsSatellites": 12
-    }
-    return data
+# ── Drone Simulator ───────────────────────────────────────────────────────────
+
+class DroneSimulator:
+    """Simulates a single drone's physics and telemetry."""
+
+    def __init__(self, drone_id: str, index: int = 0, config: dict = {}):
+        self.id = drone_id
+        self.logger = logging.getLogger(drone_id)
+        self.running = False
+        self._lock = threading.Lock()
+
+        # Config
+        base_lat = config.get("base_lat", 37.7749)
+        base_lng = config.get("base_lng", -122.4194)
+        self.gps_deny_after = config.get("gps_deny_after", None)  # seconds
+        self.radius = config.get("orbit_radius", 0.002 + index * 0.0005)
+
+        # State
+        self.center_lat = base_lat + index * 0.002
+        self.center_lng = base_lng
+        self.angle = random.uniform(0, 2 * math.pi)  # start at random point
+        self.altitude = 50.0 + index * 10
+        self.target_altitude = self.altitude
+        self.speed = 0.0
+        self.target_speed = 12.0
+        self.vertical_speed = 0.0
+        self.battery_wh = BATTERY_CAPACITY_WH
+        self.battery_pct = 100.0
+        self.mode = "Auto"
+        self.status = "flying"
+        self.armed = True
+
+        # Wind state (slowly varying)
+        self.wind_speed = random.uniform(3, 12)   # m/s
+        self.wind_dir = random.uniform(0, 360)     # degrees
+        self.wind_drift_lat = 0.0
+        self.wind_drift_lng = 0.0
+
+        # GPS
+        self.gps_satellites = 14
+        self.hdop = 0.8
+
+        # Command state
+        self.pending_command: Optional[str] = None
+        self.rtl_active = False
+        self.land_active = False
+
+        # Timing
+        self.start_time = time.time()
+        self.last_update = self.start_time
+
+    @property
+    def elapsed(self) -> float:
+        return time.time() - self.start_time
+
+    def apply_command(self, cmd: str):
+        with self._lock:
+            cmd = cmd.lower().strip()
+            self.logger.info(f"Command received: {cmd}")
+            if cmd == "rtl":
+                self.rtl_active = True
+                self.land_active = False
+                self.mode = "RTL"
+            elif cmd == "land":
+                self.land_active = True
+                self.rtl_active = False
+                self.mode = "Land"
+            elif cmd == "abort":
+                self.rtl_active = False
+                self.land_active = False
+                self.mode = "Abort"
+                self.target_speed = 0.0
+            elif cmd == "arm":
+                self.armed = True
+                self.mode = "Auto"
+                self.logger.info("Drone armed")
+            elif cmd == "disarm":
+                self.armed = False
+                self.mode = "Disarmed"
+                self.logger.warning("Drone disarmed remotely")
+
+    def _update_physics(self, dt: float):
+        """Update position, velocity, battery."""
+        t = self.elapsed
+
+        # ── Wind model (slow sinusoidal variation)
+        self.wind_speed = 8.5 + 4 * math.sin(t * 0.02)
+        self.wind_dir = (245 + 30 * math.sin(t * 0.01)) % 360
+
+        # Wind drift on position
+        wind_rad = math.radians(self.wind_dir)
+        wind_lat = math.cos(wind_rad) * self.wind_speed * WIND_DRIFT_COEFF * dt
+        wind_lng = math.sin(wind_rad) * self.wind_speed * WIND_DRIFT_COEFF * dt
+        self.wind_drift_lat += wind_lat
+        self.wind_drift_lng += wind_lng
+
+        # ── Speed with acceleration
+        speed_err = self.target_speed - self.speed
+        self.speed += speed_err * (dt / ACCEL_TIME)
+        self.speed = max(0, min(self.speed, MAX_SPEED_MS))
+
+        # ── Angular position update (circular orbit)
+        # angular_speed in rad/s from linear speed and orbit radius
+        # radius in degrees ≈ 0.002° ≈ 220m
+        orbit_circumference = 2 * math.pi * self.radius * 111320  # meters
+        if orbit_circumference > 0:
+            angular_speed = self.speed / orbit_circumference * 2 * math.pi
+        else:
+            angular_speed = 0.05
+        self.angle += angular_speed * dt
+
+        # ── RTL logic: fly back toward center, then descend
+        if self.rtl_active:
+            self.target_altitude = 60.0
+            if self.altitude <= 62:
+                self.target_altitude = 5.0
+            if self.altitude <= 5.5:
+                self.status = "landed"
+                self.mode = "Landed"
+                self.rtl_active = False
+
+        # ── Land logic
+        if self.land_active:
+            self.target_altitude = 0.0
+            self.target_speed = 0.0
+            if self.altitude <= 0.5:
+                self.status = "landed"
+                self.mode = "Landed"
+                self.land_active = False
+
+        # ── Altitude physics
+        alt_err = self.target_altitude - self.altitude
+        self.vertical_speed = alt_err * 0.3  # proportional control
+        self.vertical_speed = max(-5.0, min(5.0, self.vertical_speed))
+        self.altitude += self.vertical_speed * dt
+        self.altitude = max(0, self.altitude)
+
+        # ── Battery model: P = k * thrust^1.5 (simplified)
+        # At hover: 400W; at full speed: ~600W
+        speed_fraction = self.speed / MAX_SPEED_MS
+        power_w = HOVER_POWER_W * (1 + 0.5 * speed_fraction)
+        if self.status == "landed":
+            power_w = 30  # idle/standby
+
+        energy_wh = power_w * dt / 3600
+        self.battery_wh = max(0, self.battery_wh - energy_wh)
+        self.battery_pct = (self.battery_wh / BATTERY_CAPACITY_WH) * 100
+
+        # ── GPS-denied simulation
+        if self.gps_deny_after and t > self.gps_deny_after:
+            self.gps_satellites = max(0, int(14 - (t - self.gps_deny_after) * 0.5))
+            self.hdop = min(9.9, 0.8 + (t - self.gps_deny_after) * 0.1)
+            if self.gps_satellites < DEADZONE_SAT_THRESHOLD and self.mode == "Auto":
+                self.mode = "GPS-Denied"
+        else:
+            self.gps_satellites = 14 + int(random.gauss(0, 0.5))
+            self.hdop = 0.8 + random.uniform(-0.05, 0.05)
+
+        # Battery critical
+        if self.battery_pct < 5 and self.status == "flying":
+            if not self.rtl_active and not self.land_active:
+                self.logger.warning("Critical battery – forcing RTL")
+                self.apply_command("rtl")
+        elif self.battery_pct < 20 and not self.rtl_active and self.mode == "Auto":
+            self.mode = "Low Battery"
+
+    def get_telemetry(self) -> dict:
+        """Return the current telemetry payload."""
+        t = self.elapsed
+
+        # Position
+        lat_offset = self.radius * math.sin(self.angle) * 0.8  # elliptical
+        lng_offset = self.radius * math.cos(self.angle)
+        lat = self.center_lat + lat_offset + self.wind_drift_lat
+        lng = self.center_lng + lng_offset + self.wind_drift_lng
+
+        # Heading from flight direction
+        dlat = self.radius * math.cos(self.angle) * 0.8
+        dlng = -self.radius * math.sin(self.angle)
+        heading = (math.degrees(math.atan2(dlng, dlat)) + 360) % 360
+
+        # Attitude
+        pitch = math.sin(t * 0.4) * 2.5
+        roll = math.cos(t * 0.3) * 2.5
+
+        # Motor speeds (pseudo-PWM %)
+        base_motor = 65 + (self.speed / MAX_SPEED_MS) * 15
+        motors = {
+            "m1": base_motor + 3 * math.sin(t * 1.0),
+            "m2": base_motor + 3 * math.cos(t * 1.0),
+            "m3": base_motor + 3 * math.sin(t * 1.1),
+            "m4": base_motor + 3 * math.cos(t * 1.2),
+        }
+
+        # Voltage model: 6S LiPo, 22.2V nominal, sags under load
+        speed_fraction = self.speed / MAX_SPEED_MS
+        voltage = 25.2 * (self.battery_pct / 100) - 0.8 * speed_fraction
+        current = 18.0 * speed_fraction + 5.0 if self.status == "flying" else 1.5
+
+        return {
+            "id": self.id,
+            "location": {"lat": lat, "lng": lng, "altitude": round(self.altitude, 2)},
+            "speed": round(self.speed, 2),
+            "verticalSpeed": round(self.vertical_speed, 2),
+            "battery": round(self.battery_pct, 2),
+            "signal": round(95 + 3 * math.sin(t * 0.5), 1),
+            "heading": round(heading, 1),
+            "pitch": round(pitch, 2),
+            "roll": round(roll, 2),
+            "yaw": round(heading, 1),
+            "temperature": round(25 + random.gauss(0, 0.2), 1),
+            "mode": self.mode,
+            "status": self.status,
+            "armed": self.armed,
+            "flightTime": round(t, 1),
+            "timestamp": int(time.time() * 1000),
+            "gpsSatellites": self.gps_satellites,
+            "voltage": round(voltage, 2),
+            "current": round(current, 2),
+            "hdop": round(self.hdop, 2),
+            "humidity": round(65 + 5 * math.sin(t * 0.05), 1),
+            "windSpeed": round(self.wind_speed, 1),
+            "windDir": round(self.wind_dir, 1),
+            "motors": {k: round(v, 1) for k, v in motors.items()},
+        }
+
+    def tick(self):
+        """Advance simulation by one tick."""
+        now = time.time()
+        dt = now - self.last_update
+        self.last_update = now
+        with self._lock:
+            self._update_physics(dt)
+
+
+# ── MQTT runner for one drone ─────────────────────────────────────────────────
+
+class DroneRunner:
+    def __init__(self, sim: DroneSimulator, broker: str, port: int):
+        self.sim = sim
+        self.broker = broker
+        self.port = port
+        self.logger = logging.getLogger(f"runner.{sim.id}")
+        self.client: Optional[mqtt.Client] = None
+        self._stop = threading.Event()
+        self._reconnect_delay = 1.0
+
+    def _build_client(self) -> mqtt.Client:
+        client = mqtt.Client(
+            client_id=f"sim_{self.sim.id}_{int(time.time())}",
+            protocol=mqtt.MQTTv311,
+        )
+        client.on_connect = self._on_connect
+        client.on_disconnect = self._on_disconnect
+        client.on_message = self._on_message
+        return client
+
+    def _on_connect(self, client, userdata, flags, rc):
+        if rc == 0:
+            self.logger.info(f"Connected to {self.broker}:{self.port}")
+            self._reconnect_delay = 1.0
+            # Subscribe to command topic
+            cmd_topic = f"{TOPIC_PREFIX}/{self.sim.id}/command"
+            client.subscribe(cmd_topic)
+            self.logger.info(f"Subscribed to {cmd_topic}")
+            # Publish online status
+            client.publish(
+                f"{TOPIC_PREFIX}/{self.sim.id}/status",
+                json.dumps({"id": self.sim.id, "online": True, "timestamp": int(time.time() * 1000)}),
+                retain=True,
+            )
+        else:
+            self.logger.error(f"Connection failed rc={rc}")
+
+    def _on_disconnect(self, client, userdata, rc):
+        if rc != 0:
+            self.logger.warning(f"Unexpected disconnect rc={rc}")
+
+    def _on_message(self, client, userdata, msg):
+        try:
+            payload = json.loads(msg.payload.decode())
+            cmd = payload.get("cmd") or payload.get("command", "")
+            if cmd:
+                self.sim.apply_command(cmd)
+        except Exception as e:
+            self.logger.error(f"Failed to parse command: {e}")
+
+    def run(self):
+        self.client = self._build_client()
+        telemetry_topic = f"{TOPIC_PREFIX}/{self.sim.id}/telemetry"
+
+        while not self._stop.is_set():
+            try:
+                self.logger.info(f"Connecting to {self.broker}:{self.port}…")
+                self.client.connect(self.broker, self.port, keepalive=60)
+                self.client.loop_start()
+
+                log_countdown = 0
+                while not self._stop.is_set():
+                    self.sim.tick()
+                    telemetry = self.sim.get_telemetry()
+                    self.client.publish(telemetry_topic, json.dumps(telemetry))
+
+                    log_countdown += UPDATE_INTERVAL
+                    if log_countdown >= 1.0:
+                        log_countdown = 0
+                        self.logger.info(
+                            f"Mode={telemetry['mode']:<12} Alt={telemetry['location']['altitude']:6.1f}m  "
+                            f"Spd={telemetry['speed']:5.1f}m/s  Bat={telemetry['battery']:5.1f}%  "
+                            f"Sats={telemetry['gpsSatellites']}  Wind={telemetry['windSpeed']:.1f}m/s"
+                        )
+
+                    time.sleep(UPDATE_INTERVAL)
+
+                self.client.loop_stop()
+                self.client.disconnect()
+                break
+
+            except ConnectionRefusedError:
+                self.logger.warning(f"Broker unavailable. Retry in {self._reconnect_delay:.0f}s…")
+                self._stop.wait(self._reconnect_delay)
+                self._reconnect_delay = min(self._reconnect_delay * 2, 60.0)
+            except Exception as e:
+                self.logger.error(f"Error: {e}. Retry in {self._reconnect_delay:.0f}s…")
+                self._stop.wait(self._reconnect_delay)
+                self._reconnect_delay = min(self._reconnect_delay * 2, 60.0)
+
+        self.logger.info("Runner stopped")
+
+    def stop(self):
+        self._stop.set()
+
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
+def load_config(path: str) -> dict:
+    if not YAML_AVAILABLE:
+        logging.warning("PyYAML not installed – ignoring config file")
+        return {}
+    try:
+        with open(path) as f:
+            return yaml.safe_load(f) or {}
+    except Exception as e:
+        logging.error(f"Failed to load config {path}: {e}")
+        return {}
+
 
 def main():
-    parser = argparse.ArgumentParser(description="Drone Telemetry Simulator")
-    parser.add_argument("--id", default="drone-sim-001", help="Drone ID")
-    parser.add_argument("--broker", default=BROKER, help="MQTT Broker Host")
-    parser.add_argument("--port", type=int, default=PORT, help="MQTT Broker Port")
+    parser = argparse.ArgumentParser(description="JAWJI Multi-Drone Simulator")
+    parser.add_argument("--count", type=int, default=1, help="Number of drone simulators (default: 1)")
+    parser.add_argument("--broker", default=DEFAULT_BROKER, help="MQTT broker host")
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="MQTT broker port")
+    parser.add_argument("--id-prefix", default="sim", help="Drone ID prefix (e.g. 'sim' → sim-001, sim-002)")
+    parser.add_argument("--config", default=None, help="Path to YAML config file")
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     args = parser.parse_args()
 
-    client = mqtt.Client(client_id=f"sim_{args.id}", protocol=mqtt.MQTTv311)
-    
-    try:
-        print(f"Connecting to {args.broker}:{args.port}...")
-        client.connect(args.broker, args.port, 60)
-        client.loop_start()
-        print("Connected!")
-        
-        start_time = datetime.now()
-        base_location = {"lat": 37.7749, "lng": -122.4194} # SF default
-        
-        topic = f"{TOPIC_PREFIX}/{args.id}/telemetry"
-        
-        # Smooth flight parameters
-        radius = 0.002
-        center_lat = base_location["lat"]
-        center_lng = base_location["lng"]
-        angle = 0.0
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
 
-        while True:
-            # Update physics
-            angle += 0.05  # Slower angular increment for smoother circle
-            
-            # Calculate new position
-            lat_offset = radius * math.sin(angle)
-            lng_offset = radius * math.cos(angle)
-            
-            current_lat = center_lat + lat_offset * 0.8  # Elliptical
-            current_lng = center_lng + lng_offset
-            
-            # Smooth altitude oscillation
-            elapsed = (datetime.now() - start_time).total_seconds()
-            altitude = 50 + math.sin(elapsed * 0.2) * 10
-            vertical_speed = 2.0 * math.cos(elapsed * 0.2)
-            
-            # Orientation calculations
-            yaw = (math.degrees(math.atan2(math.cos(angle), -math.sin(angle) * 0.8)) + 360) % 360
-            pitch = math.sin(elapsed * 0.5) * 2
-            roll = math.cos(elapsed * 0.3) * 2
+    cfg = load_config(args.config) if args.config else {}
 
-            telemetry = {
-                "id": args.id,
-                "location": {
-                    "lat": current_lat,
-                    "lng": current_lng,
-                    "altitude": altitude
-                },
-                "speed": 15.0 + math.sin(elapsed) * 0.5, # Less random noise
-                "verticalSpeed": vertical_speed,
-                "battery": max(0, 100 - (elapsed / 60)), # Slower drain
-                "signal": 95 + math.sin(elapsed * 10) * 2, # Signal oscillation
-                "heading": yaw,
-                "pitch": pitch,
-                "roll": roll,
-                "yaw": yaw,
-                "temperature": 25 + random.uniform(-0.1, 0.1),
-                "mode": "GPS-Denied" if (100 - (elapsed/60)) < 20 else "Auto",
-                "status": "flying",
-                "flightTime": elapsed,
-                "timestamp": time.time() * 1000,
-                "gpsSatellites": 12,
-                "voltage": 22.4 + math.sin(elapsed * 0.1) * 0.2, # 6S battery approx
-                "current": 12.3 + random.uniform(-0.5, 0.5) if altitude > 10 else 2.0,
-                "hdop": 0.8 + random.uniform(-0.1, 0.1),
-                "humidity": 65 + math.sin(elapsed * 0.05) * 5,
-                "windSpeed": 8.5 + math.sin(elapsed * 0.1) * 2,
-                "windDir": (245 + math.sin(elapsed * 0.02) * 20) % 360,
-                "motors": {
-                    "m1": 68 + math.sin(elapsed) * 5,
-                    "m2": 73 + math.cos(elapsed) * 5,
-                    "m3": 65 + math.sin(elapsed * 1.1) * 5,
-                    "m4": 74 + math.cos(elapsed * 1.2) * 5
-                }
-            }
+    runners: list[DroneRunner] = []
+    threads: list[threading.Thread] = []
 
-            payload = json.dumps(telemetry)
-            client.publish(topic, payload)
-            
-            if int(elapsed * 10) % 10 == 0: # Print once per second approx
-                print(f"Published: Mode={telemetry['mode']} Alt={telemetry['location']['altitude']:.1f}m Bat={telemetry['battery']:.1f}% Sats={telemetry['gpsSatellites']}")
-                
-            time.sleep(0.1) # 10Hz update rate
-            
-    except KeyboardInterrupt:
-        print("\nStopping simulation...")
-        client.loop_stop()
-        client.disconnect()
-    except Exception as e:
-        print(f"Error: {e}")
+    for i in range(args.count):
+        drone_id = f"{args.id_prefix}-{i + 1:03d}"
+        drone_cfg = cfg.get(drone_id, cfg.get("default", {}))
+        sim = DroneSimulator(drone_id=drone_id, index=i, config=drone_cfg)
+        runner = DroneRunner(sim=sim, broker=args.broker, port=args.port)
+        runners.append(runner)
+
+        t = threading.Thread(target=runner.run, name=f"runner-{drone_id}", daemon=True)
+        threads.append(t)
+        t.start()
+        logging.info(f"Started simulator for {drone_id}")
+        # Stagger startup slightly so MQTT connections don't overlap
+        time.sleep(0.1 * i)
+
+    # ── Graceful shutdown ─────────────────────────────────────────────────────
+    def shutdown(sig, frame):
+        logging.info("Shutdown signal received – stopping simulators…")
+        for r in runners:
+            r.stop()
+        for t in threads:
+            t.join(timeout=3.0)
+        logging.info("All simulators stopped. Goodbye.")
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, shutdown)
+    signal.signal(signal.SIGTERM, shutdown)
+
+    logging.info(f"Simulating {args.count} drone(s). Press Ctrl+C to stop.")
+    # Keep main thread alive
+    while True:
+        time.sleep(1)
+
 
 if __name__ == "__main__":
     main()

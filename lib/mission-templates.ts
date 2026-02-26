@@ -1,5 +1,5 @@
 import { z } from "zod"
-import type { MissionType, DeliveryDetails, SurveyDetails, InspectionDetails } from "./mission-store"
+import type { MissionType, MissionPackage, DeliveryDetails, SurveyDetails, InspectionDetails } from "./mission-store"
 
 // Validation schemas for each mission type
 export const deliveryDetailsSchema = z.object({
@@ -119,6 +119,47 @@ export const MISSION_TEMPLATES: Record<MissionType, MissionTemplate> = {
         defaultFields: {},
         requiredFields: [],
     },
+}
+
+export interface PackageDefinition {
+    package: MissionPackage
+    label: string
+    description: string
+    icon: string
+}
+
+export const MISSION_PACKAGES: Record<MissionType, PackageDefinition[]> = {
+    delivery: [
+        { package: "obstacle_avoidance", label: "Obstacle Avoidance", description: "Real-time obstacle detection and path re-routing", icon: "Shield" },
+        { package: "payload_release", label: "Payload Release", description: "Precision drop/winch system for package delivery", icon: "Package" },
+        { package: "drone_detection", label: "Drone Detection", description: "Airspace awareness – detect nearby UAVs", icon: "Radar" },
+        { package: "live_streaming", label: "Live Streaming", description: "Real-time HD video feed during delivery", icon: "Video" },
+    ],
+    survey: [
+        { package: "crop_detection", label: "Crop Detection", description: "NDVI and multispectral crop health analysis", icon: "Leaf" },
+        { package: "photogrammetry", label: "Photogrammetry", description: "3D model and orthomosaic map generation", icon: "Map" },
+        { package: "thermal_imaging", label: "Thermal Imaging", description: "Thermal camera integration for heat mapping", icon: "Thermometer" },
+        { package: "obstacle_avoidance", label: "Obstacle Avoidance", description: "Safe low-altitude flight around terrain", icon: "Shield" },
+        { package: "ai_tracking", label: "AI Tracking", description: "Machine learning object and movement detection", icon: "Cpu" },
+    ],
+    inspection: [
+        { package: "drone_detection", label: "Drone Detection", description: "Detect unauthorized drones in inspection area", icon: "Radar" },
+        { package: "thermal_imaging", label: "Thermal Imaging", description: "Identify heat signatures and anomalies", icon: "Thermometer" },
+        { package: "obstacle_avoidance", label: "Obstacle Avoidance", description: "Navigate around structures safely", icon: "Shield" },
+        { package: "rtk_precision", label: "RTK Precision", description: "Centimeter-level GPS accuracy for exact positioning", icon: "Target" },
+        { package: "live_streaming", label: "Live Streaming", description: "Real-time video for remote inspection teams", icon: "Video" },
+    ],
+    custom: [
+        { package: "obstacle_avoidance", label: "Obstacle Avoidance", description: "Real-time obstacle detection and path re-routing", icon: "Shield" },
+        { package: "crop_detection", label: "Crop Detection", description: "NDVI and multispectral crop health analysis", icon: "Leaf" },
+        { package: "drone_detection", label: "Drone Detection", description: "Airspace awareness – detect nearby UAVs", icon: "Radar" },
+        { package: "thermal_imaging", label: "Thermal Imaging", description: "Thermal camera integration for heat mapping", icon: "Thermometer" },
+        { package: "photogrammetry", label: "Photogrammetry", description: "3D model and orthomosaic map generation", icon: "Map" },
+        { package: "payload_release", label: "Payload Release", description: "Precision drop/winch system for package delivery", icon: "Package" },
+        { package: "rtk_precision", label: "RTK Precision", description: "Centimeter-level GPS accuracy for exact positioning", icon: "Target" },
+        { package: "live_streaming", label: "Live Streaming", description: "Real-time HD video feed", icon: "Video" },
+        { package: "ai_tracking", label: "AI Tracking", description: "Machine learning object and movement detection", icon: "Cpu" },
+    ],
 }
 
 /**

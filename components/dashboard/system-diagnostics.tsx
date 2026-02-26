@@ -39,7 +39,7 @@ function DiagSection({ icon, value, unit, status, color = "text-primary" }: { ic
 
 export function SystemDiagnostics({ telemetry }: { telemetry: Telemetry }) {
     return (
-        <Card className="flex flex-col bg-background/60 dark:bg-background/40 backdrop-blur-xl border-border/40 overflow-hidden glass-panel rounded-xl">
+        <Card className="h-full flex flex-col bg-background/60 dark:bg-background/40 backdrop-blur-xl border-border/40 overflow-hidden glass-panel rounded-xl">
 
 
             <Tabs defaultValue="data" className="flex-1 flex flex-col min-h-0">
