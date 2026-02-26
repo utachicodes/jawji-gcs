@@ -65,7 +65,7 @@ export function SystemDiagnostics({ telemetry }: { telemetry: Telemetry }) {
                             </span>
                         </div>
                         <div className="space-y-1">
-                            <Progress value={telemetry.battery} className="h-1 bg-white/5" color={telemetry.battery < 20 ? "hsl(var(--destructive))" : "hsl(var(--primary))"} />
+                            <Progress value={telemetry.battery} className="h-1 bg-muted/20" color={telemetry.battery < 20 ? "hsl(var(--destructive))" : "hsl(var(--primary))"} />
                             <div className="grid grid-cols-1 pt-2">
                                 <MetricRow label="Time to Empty" value={`~${telemetry.timeToEmpty.toFixed(0)} MIN`} color={telemetry.timeToEmpty < 5 ? "text-destructive" : "text-primary"} />
                                 <MetricRow label="Battery Voltage" value={`${telemetry.voltage.toFixed(2)}V`} />
@@ -75,7 +75,7 @@ export function SystemDiagnostics({ telemetry }: { telemetry: Telemetry }) {
                     </section>
 
                     {/* Navigation */}
-                    <section className="space-y-4 pt-4 border-t border-white/10">
+                    <section className="space-y-4 pt-4 border-t border-border/10">
                         <div className="flex items-center gap-2 text-[8px] font-black text-muted-foreground uppercase tracking-[0.2em] px-1">
                             <Navigation className="h-3 w-3 text-primary" />
                             Global Position
@@ -87,7 +87,7 @@ export function SystemDiagnostics({ telemetry }: { telemetry: Telemetry }) {
                         </div>
                     </section>
 
-                    <section className="space-y-4 pt-4 border-t border-white/10">
+                    <section className="space-y-4 pt-4 border-t border-border/10">
                         <div className="flex items-center justify-between px-1">
                             <div className="flex items-center gap-2 text-[8px] font-black text-muted-foreground uppercase tracking-[0.2em]">
                                 <Wind className="h-3 w-3 text-primary" />
@@ -104,7 +104,7 @@ export function SystemDiagnostics({ telemetry }: { telemetry: Telemetry }) {
                     </section>
 
                     {/* Motor Status */}
-                    <section className="space-y-4 pt-4 border-t border-white/10">
+                    <section className="space-y-4 pt-4 border-t border-border/10">
                         <div className="flex items-center justify-between px-1">
                             <div className="flex items-center gap-2 text-[8px] font-black text-muted-foreground uppercase tracking-[0.2em]">
                                 <Activity className="h-3 w-3 text-primary" />
