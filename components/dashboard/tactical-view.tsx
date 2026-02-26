@@ -1,19 +1,21 @@
 "use client"
 
+import type { ReactNode } from "react"
+import { cn } from "@/lib/utils"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { MissionProgress } from "@/components/mission-progress"
 
 interface TacticalViewProps {
-    mapElement: React.ReactNode
+    mapElement: ReactNode
     mapMode: "2D" | "3D"
     onToggleMapMode: () => void
     className?: string
 }
 
-export function TacticalView({ mapElement, mapMode, onToggleMapMode }: TacticalViewProps) {
+export function TacticalView({ mapElement, mapMode, onToggleMapMode, className }: TacticalViewProps) {
     return (
-        <div className="flex flex-col gap-3 h-full min-h-0">
+        <div className={cn("flex flex-col gap-3 h-full min-h-0", className)}>
 
             {/* Map — takes all remaining vertical space */}
             <Card className="flex-1 relative bg-background/60 dark:bg-background/40 backdrop-blur-xl border-border/40 overflow-hidden rounded-xl min-h-0">
