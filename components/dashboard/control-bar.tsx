@@ -50,7 +50,7 @@ export function ControlBar({ className }: { className?: string }) {
           <Button
             variant="ghost"
             onClick={() => setTakeoffOpen(true)}
-            className="h-full min-h-0 rounded-md px-4 flex flex-col items-start justify-center border-2 border-emerald-500/70 bg-emerald-500/20 hover:bg-emerald-500/30 text-foreground active:translate-y-px"
+            className="h-full min-h-0 rounded-md px-4 flex flex-col items-start justify-center border-2 border-primary/70 bg-primary/20 hover:bg-primary/30 text-foreground active:translate-y-px"
           >
             <span className="text-[11px] font-black uppercase tracking-[0.25em]">TAKEOFF</span>
             <span className="text-[10px] font-mono font-bold text-muted-foreground tracking-tight">AUTO ASCEND</span>
@@ -59,7 +59,7 @@ export function ControlBar({ className }: { className?: string }) {
           <Button
             variant="ghost"
             onClick={() => toast.warning("RTH command issued")}
-            className="h-full min-h-0 rounded-md px-4 flex flex-col items-start justify-center border-2 border-emerald-500/70 bg-emerald-500/10 hover:bg-emerald-500/20 text-foreground active:translate-y-px"
+            className="h-full min-h-0 rounded-md px-4 flex flex-col items-start justify-center border-2 border-border/80 bg-muted/10 hover:bg-muted/20 text-foreground active:translate-y-px"
           >
             <span className="text-[11px] font-black uppercase tracking-[0.25em]">RTH</span>
             <span className="text-[10px] font-mono font-bold text-muted-foreground tracking-tight">RETURN HOME</span>
