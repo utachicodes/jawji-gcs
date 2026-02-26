@@ -43,10 +43,7 @@ export function ControlBar({ className }: { className?: string }) {
 
   return (
     <>
-      <div className={`grid grid-cols-12 gap-3 h-full ${className ?? ""}`}>
-
-        {/* Primary flight actions — 4 equal buttons */}
-        <div className="col-span-12 grid grid-cols-2 grid-rows-2 md:grid-cols-4 md:grid-rows-1 gap-3 h-full">
+      <div className={`grid grid-cols-2 grid-rows-2 md:grid-cols-4 md:grid-rows-1 gap-3 h-full ${className ?? ""}`}>
           <Button
             variant="ghost"
             onClick={() => setTakeoffOpen(true)}
@@ -84,7 +81,6 @@ export function ControlBar({ className }: { className?: string }) {
               {activeMissionId ? "MISSION ACTIVE" : "EMERGENCY STOP"}
             </span>
           </Button>
-        </div>
       </div>
 
       {/* Takeoff confirmation dialog */}

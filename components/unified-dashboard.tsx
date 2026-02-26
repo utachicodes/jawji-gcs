@@ -140,7 +140,7 @@ export function UnifiedDashboard() {
       </div>
 
       {/* Bottom: Control Interface */}
-      <div className="h-32 md:h-28 shrink-0 z-10">
+      <div className="h-24 md:h-20 shrink-0 z-10">
         <ControlBar className="rounded-xl" />
       </div>
 
