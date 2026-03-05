@@ -39,15 +39,15 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className="dark">
       <body className={`min-h-screen bg-background text-foreground antialiased font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <ThemeProvider defaultTheme="dark" storageKey="jawji-theme">
-          <AuthWrapper>
-            <Suspense fallback={null}>
+          <Suspense fallback={null}>
+            <AuthWrapper>
               {children}
               <Analytics />
               <Toaster richColors position="top-right" />
-            </Suspense>
-            <TelemetryBootstrap />
-            <PwaBootstrap />
-          </AuthWrapper>
+            </AuthWrapper>
+          </Suspense>
+          <TelemetryBootstrap />
+          <PwaBootstrap />
         </ThemeProvider>
       </body>
     </html>

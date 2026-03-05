@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import dynamic from "next/dynamic"
 import { AuthWrapper } from "@/components/auth-wrapper"
 import { AppLayout } from "@/components/app-layout"
@@ -13,7 +14,9 @@ export default function MissionPlanningPage() {
   return (
     <AuthWrapper>
       <AppLayout>
-        <MissionPlanning />
+        <React.Suspense fallback={null}>
+          <MissionPlanning />
+        </React.Suspense>
       </AppLayout>
     </AuthWrapper>
   )
