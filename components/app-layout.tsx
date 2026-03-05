@@ -8,9 +8,11 @@ import { StatusBar } from "@/components/status-bar"
 
 import { useDroneStore } from "@/lib/drone-store"
 import { useEffect } from "react"
+import { usePathname } from "next/navigation"
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const checkOffline = useDroneStore((s) => s.checkOffline)
+  const pathname = usePathname()
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -27,7 +29,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <StatusBar />
           {/* Ambient background layer */}
           <main className="flex-1 relative flex flex-col overflow-hidden">
-            <div className="flex-1 flex flex-col w-full h-full max-w-[1700px] mx-auto px-2 py-2 sm:px-4 lg:px-6">
+            <div className={`flex-1 flex flex-col w-full h-full ${pathname === "/" ? "" : "max-w-[1700px] mx-auto px-2 py-2 sm:px-4 lg:px-6"}`}>
               {children}
             </div>
           </main>
